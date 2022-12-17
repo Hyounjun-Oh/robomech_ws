@@ -19,7 +19,7 @@ Git Branch 전략을 활용한 레포지토리 관리:high_brightness:
 
 팀원 총 3명의 작은 규모의 팀이므로 Github flow 전략을 사용한다.
 
-_[Commit 메세지 작성 포맷]_
+__[Commit 메세지 작성 포맷]__
 
 1번째 줄 : 커밋 내의 변경 내용을 요약
 
