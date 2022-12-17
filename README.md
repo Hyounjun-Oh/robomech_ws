@@ -16,3 +16,5 @@
 # :pencil: 특이사항
 
 Git Branch 전략을 활용한 레포지토리 관리:high_brightness:
+
+팀원 총 3명의 작은 규모의 팀이므로 Github flow 전략을 사용한다.
