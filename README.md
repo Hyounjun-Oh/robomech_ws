@@ -12,3 +12,7 @@
 
 # ⏳프로젝트 수행기간
 2022.12 ~ 2023.2
+
+# :pencil: 특이사항
+
+Git Branch 전략을 활용한 레포지토리 관리:high_brightness:
