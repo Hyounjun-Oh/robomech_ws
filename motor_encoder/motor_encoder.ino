@@ -10,15 +10,14 @@
 //////////////////////////////////////////////////////////////////////////////////
 
 //Motor Control
-const int motor1_DirPin = 2;
-const int motor2_DirPin = 4;
-const int motor3_DirPin = 7;
-const int motor4_DirPin = 8;
-
-const int motor1_PWMPin = 3;
-const int motor2_PWMPin = 5;
-const int motor3_PWMPin = 6;
-const int motor4_PWMPin = 9;
+const int motor1_PWMPinA = 2;
+const int motor1_PWMPinB = 3;
+const int motor2_PWMPinA = 4;
+const int motor2_PWMPinB = 5;
+const int motor3_PWMPinA = 6;
+const int motor3_PWMPinB = 7;
+const int motor4_PWMPinA = 8;
+const int motor4_PWMPinB = 9;
 //Encoder Control
 const int encoder_1_pose = 0;
 const int encoder_2_pose = 0;
