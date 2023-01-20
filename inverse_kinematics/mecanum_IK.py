@@ -4,7 +4,6 @@
 # [reference]
 # 2015 International Seminar on Intelligent Technology and Its Applications 
 # Inverse Kinematic Implementation of F our-Wheels Mecanum Drive Mobile Robot Using Stepper Motors
-
 import numpy as np
 
 width = 170 # 중심점으로부터 모터의 가로 위치
