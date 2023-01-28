@@ -1,7 +1,7 @@
 # 메카넘휠 역기구학 솔버
 # Hyounjun Oh
 # mail : ohj_980918@naver.com
-# [reference]
+# ####[reference]####
 # 2015 International Seminar on Intelligent Technology and Its Applications 
 # Inverse Kinematic Implementation of F our-Wheels Mecanum Drive Mobile Robot Using Stepper Motors
 import numpy as np
