@@ -27,7 +27,6 @@
 #elif defined(__OPENCR__)
   #define DEVICE_NAME ""
 #endif   
-
 #define BAUDRATE  57600
 #define JOINT_1    1 //DXL_ID
 #define JOINT_2    2
@@ -95,21 +94,28 @@ void setup()
   {
     Serial.println("Succeed to change joint mode");
     Serial.println("Dynamixel is moving...");
-
-    for (int count = 0; count < 3; count++)
-    {
-      dxl_wb.goalPosition(joint_1, (int32_t)0);
-      dxl_wb.goalPosition(joint_2, (int32_t)0);
-      delay(3000);
-
-      dxl_wb.goalPosition(joint_1, (int32_t)2022);
-      dxl_wb.goalPosition(joint_2, (int32_t)2022);
-      delay(3000);
-    }
   }
 }
 
 void loop() 
 {
+  char input_data;
+  while(Serial.available())
+  {
+    input_data = Serial.read();
+  }
 
+  if(input_data == '1')
+  {
+    for (int count = 0; count < 3; count++)
+    {
+      dxl_wb.goalPosition(JOINT_1, (int32_t)0);
+      dxl_wb.goalPosition(JOINT_2, (int32_t)0);
+      delay(3000);
+
+      dxl_wb.goalPosition(JOINT_1, (int32_t)2022);
+      dxl_wb.goalPosition(JOINT_2, (int32_t)2022);
+      delay(3000);
+    }
+  }
 }
