@@ -35,9 +35,16 @@
 
 DynamixelWorkbench dxl_wb;
 
+double joint[3]; //조인트 값 담을 배열 선언.
+
 void setup() 
 {
-  Serial.begin(57600);
+  Serial.begin(57600); //다이나믹셀 제어용 UART
+  
+  //Serial.begin(9600); //Joint값 받는 UART
+  pinMode(13, OUTPUT); //시리얼 값 피드백을 위한 LED 추가
+  digitalWrite(13,LOW);
+
   // while(!Serial); // Wait for Opening Serial Monitor
 
   const char *log;
@@ -52,6 +59,8 @@ void setup()
   uint8_t joint_3 = JOINT_3;
   uint8_t joint_4 = JOINT_4;
   uint16_t model_number = 0;
+
+  // 모터 상태 초기화.
 
   result = dxl_wb.init(DEVICE_NAME, BAUDRATE, &log);
   if (result == false)
@@ -107,15 +116,22 @@ void loop()
 
   if(input_data == '1')
   {
-    for (int count = 0; count < 3; count++)
-    {
+    
       dxl_wb.goalPosition(JOINT_1, (int32_t)0);
       dxl_wb.goalPosition(JOINT_2, (int32_t)0);
-      delay(3000);
-
-      dxl_wb.goalPosition(JOINT_1, (int32_t)2022);
-      dxl_wb.goalPosition(JOINT_2, (int32_t)2022);
-      delay(3000);
-    }
+      delay(1000);
+      dxl_wb.goalPosition(JOINT_1, (int32_t)555);
+      dxl_wb.goalPosition(JOINT_2, (int32_t)555);
+      delay(100);
+      dxl_wb.goalPosition(JOINT_1, (int32_t)1000);
+      dxl_wb.goalPosition(JOINT_2, (int32_t)1000);
+      delay(100);
+      dxl_wb.goalPosition(JOINT_1, (int32_t)1200);
+      dxl_wb.goalPosition(JOINT_2, (int32_t)1200);
+      delay(100);
+      dxl_wb.goalPosition(JOINT_1, (int32_t)1800);
+      dxl_wb.goalPosition(JOINT_2, (int32_t)1800);
+      delay(100);
+    
   }
 }
