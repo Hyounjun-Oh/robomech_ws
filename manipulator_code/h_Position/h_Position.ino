@@ -42,8 +42,6 @@ void setup()
   Serial.begin(57600); //다이나믹셀 제어용 UART
   
   //Serial.begin(9600); //Joint값 받는 UART
-  pinMode(13, OUTPUT); //시리얼 값 피드백을 위한 LED 추가
-  digitalWrite(13,LOW);
 
   // while(!Serial); // Wait for Opening Serial Monitor
 
@@ -104,6 +102,9 @@ void setup()
     Serial.println("Succeed to change joint mode");
     Serial.println("Dynamixel is moving...");
   }
+  dxl_wb.itemWrite(JOINT_1, "Drive_Mode", 4); //DriveMode Profile Configuration 정의 
+  dxl_wb.itemWrite(JOINT_1, "Profile_Acceleration", 4989);
+  dxl_wb.itemWrite(JOINT_1, "Profile_Velocity", 3506); 
 }
 
 void loop() 
@@ -116,22 +117,12 @@ void loop()
 
   if(input_data == '1')
   {
-    
-      dxl_wb.goalPosition(JOINT_1, (int32_t)0);
-      dxl_wb.goalPosition(JOINT_2, (int32_t)0);
-      delay(1000);
-      dxl_wb.goalPosition(JOINT_1, (int32_t)555);
-      dxl_wb.goalPosition(JOINT_2, (int32_t)555);
-      delay(100);
-      dxl_wb.goalPosition(JOINT_1, (int32_t)1000);
-      dxl_wb.goalPosition(JOINT_2, (int32_t)1000);
-      delay(100);
-      dxl_wb.goalPosition(JOINT_1, (int32_t)1200);
-      dxl_wb.goalPosition(JOINT_2, (int32_t)1200);
-      delay(100);
-      dxl_wb.goalPosition(JOINT_1, (int32_t)1800);
-      dxl_wb.goalPosition(JOINT_2, (int32_t)1800);
-      delay(100);
+    dxl_wb.goalPosition(JOINT_1, 0);
+    while ((dxl_wb.itemRead(JOINT_1, "Goal_Position", NULL) - dxl_wb.itemRead(JOINT_1, "Present_Position", NULL)) != 0){
+      delay(1);
+    };
+    //dxl_wb.itemWrite(JOINT_1, "Torque_Enable", 1);
+    dxl_wb.goalPosition(JOINT_1, (int32_t)4000);
     
   }
 }
