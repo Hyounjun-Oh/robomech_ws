@@ -4,7 +4,7 @@ function array = H_matrix_for_jacobian(theta_array)
 %% DH파라미터 기입
 d = [55 0 0 0];
 a = [0 200 200 100];
-al = [90 0 0 0].*(pi/180);
+al = [90 90 -90 0].*(pi/180);
 q = [theta_array(1) theta_array(2) theta_array(3) theta_array(4)];
 %% 동차변환
 T01 = DHmatrix(q(1),d(1),a(1),al(1));

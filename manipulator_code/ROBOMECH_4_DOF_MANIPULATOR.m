@@ -24,7 +24,7 @@ format long
 theta = [0 0 0 0].*(pi/180);
 d = [55 0 0 0];
 a_dh = [0 200 200 100];
-alpha = [90 0 0 0].*(pi/180);
+alpha = [90 90 -90 0].*(pi/180);
 %% DATA INITIALIZATION
 
 % Value of each Actuator
@@ -39,7 +39,9 @@ ti = 0; tf = 2; t = linspace(ti,tf,100*(tf-ti));
 % Desired Pose
 desired_pose_1 = [200 200 -200 0 0 0];
 
-desired_pose_array = [100 200 200 0 0 0];
+desired_pose_array = [300 200 200 0 0 0;
+                      100 100 200 0 0 0;
+                      200 -200 200 0 0 0];
 % Current Pose
 current_pose = zeros(3,length(t));  %현재는 position만 고려한다.
 
@@ -116,7 +118,10 @@ while 1
         else
             initial_pose = H_matrix(qf);
             %% FIND TRAJECTORIES
+            vi = [0 0 0 0 0 0];
             vf = [0 0 0 0 0 0];
+            ai = [0 0 0 0 0 0];
+            af = [0 0 0 0 0 0];
             % Quintic Polynomial
             M = [1 ti ti^2 ti^3 ti^4 ti^5;
                  0 1 2*ti 3*(ti^2) 4*(ti^3) 5*(ti^4);
@@ -143,10 +148,10 @@ while 1
     
             for k = 1:length(t)-1
                 if k == 1
-                    jacobian = jacobian7(initial_joints);
+                    jacobian = jacobian7(qf);
                     q_dot_f = pinv(jacobian) * ([vxd(k) vyd(k) vzd(k) 0 0 0])';
-                    current_joints(1:4,k) = initial_joints;
-                    qf = initial_joints' + q_dot_f.*(t(k+1)-t(k));
+                    current_joints(1:4,k) = qf;
+                    qf = qf + q_dot_f.*(t(k+1)-t(k));
                     Plot_Points = H_matrix(qf);
                     current_pose(1:3,k) = Plot_Points(1:3,5);
                     current_joints(1:4,k+1) = qf;
