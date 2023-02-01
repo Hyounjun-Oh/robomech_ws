@@ -39,9 +39,11 @@ ti = 0; tf = 2; t = linspace(ti,tf,100*(tf-ti));
 % Desired Pose
 desired_pose_1 = [200 200 -200 0 0 0];
 
-desired_pose_array = [300 200 200 0 0 0;
-                      100 100 200 0 0 0;
-                      200 -200 200 0 0 0];
+desired_pose_array = [-300 -100 300 0 0 0;
+                      -300 -100 200 0 0 0;
+                      -300 100 200 0 0 0;
+                      -300 100 300 0 0 0;
+                      -300 0 255 0 0 0];
 % Current Pose
 current_pose = zeros(3,length(t));  %현재는 position만 고려한다.
 
@@ -49,7 +51,7 @@ current_pose = zeros(3,length(t));  %현재는 position만 고려한다.
 current_joints = zeros(4,length(t));
 %% FIND CURRENT INITIAL POSE
 
-initial_joints = [90.0001 0 0 0].*(pi/180);
+initial_joints = [90 90 -90 0].*(pi/180);
 initial_pose = H_matrix(initial_joints);
 %% FIND TRAJECTORIES
 
