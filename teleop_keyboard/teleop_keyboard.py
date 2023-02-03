@@ -48,26 +48,29 @@ else:
     import termios
     import tty
 
-BURGER_MAX_LIN_VEL = 0.22
-BURGER_MAX_ANG_VEL = 2.84
+MAX_LIN = 0.3
+MAX_DIA = 0.6
+MAX_ROT = 1.7
+LIN_VEL_STEP_SIZE = 0.01
+ANG_VEL_STEP_SIZE = 0.1
 
 msg = """
-Control Your TurtleBot3!
+혼자서도 잘해요
+[Mecanum wheel Mobile Manipulator]
 ---------------------------
-Moving around:
-        w
-   a    s    d
-        x
+키배치:
+    Q   W   E
+    A   S   D
+        X
 
-w/x : increase/decrease linear velocity (Burger : ~ 0.22, Waffle and Waffle Pi : ~ 0.26)
-a/d : increase/decrease angular velocity (Burger : ~ 2.84, Waffle and Waffle Pi : ~ 1.82)
-
-space key, s : force stop
-
-CTRL-C to quit
+w/x : 증가/감소 Vx [최고속도 : 0.3 m/s]
+a/d : 증가/감소 Vy [최고속도 : 0.3 m/s]
+q/e : 증가/감소 Rz [최고속도 : 1.7647 rad/s]
+s   : 강제 정지
+CTRL-C : 컨트롤러 종료
 """
 
-e = """
+r = """
 Communications Failed
 """
 
@@ -86,9 +89,9 @@ def get_key(settings):
     return key
 
 
-def print_vels(target_linear_velocity, target_angular_velocity):
-    print('currently:\tlinear velocity {0}\t angular velocity {1} '.format(
-        target_linear_velocity,
+def print_vels(target_linear_X_velocity, target_linear_Y_velocity, target_angular_velocity):
+    print('currently:\tlinear X velocity {0} \tlinear Y velocity {1}\t angular velocity {2} '.format(
+        target_linear_X_velocity,target_linear_Y_velocity,
         target_angular_velocity))
 
 
@@ -115,17 +118,11 @@ def constrain(input_vel, low_bound, high_bound):
 
 
 def check_linear_limit_velocity(velocity):
-    if TURTLEBOT3_MODEL == 'burger':
-        return constrain(velocity, -BURGER_MAX_LIN_VEL, BURGER_MAX_LIN_VEL)
-    else:
-        return constrain(velocity, -WAFFLE_MAX_LIN_VEL, WAFFLE_MAX_LIN_VEL)
+    return constrain(velocity, -MAX_LIN, MAX_LIN)
 
 
 def check_angular_limit_velocity(velocity):
-    if TURTLEBOT3_MODEL == 'burger':
-        return constrain(velocity, -BURGER_MAX_ANG_VEL, BURGER_MAX_ANG_VEL)
-    else:
-        return constrain(velocity, -WAFFLE_MAX_ANG_VEL, WAFFLE_MAX_ANG_VEL)
+    return constrain(velocity, -MAX_LIN, MAX_LIN)
 
 
 def main():
@@ -140,9 +137,11 @@ def main():
     pub = node.create_publisher(Twist, 'cmd_vel', qos)
 
     status = 0
-    target_linear_velocity = 0.0
+    target_linear_X_velocity = 0.0
+    target_linear_Y_velocity = 0.0    
     target_angular_velocity = 0.0
-    control_linear_velocity = 0.0
+    control_linear_X_velocity = 0.0
+    control_linear_Y_velocity = 0.0
     control_angular_velocity = 0.0
 
     try:
@@ -150,31 +149,43 @@ def main():
         while(1):
             key = get_key(settings)
             if key == 'w':
-                target_linear_velocity =\
-                    check_linear_limit_velocity(target_linear_velocity + LIN_VEL_STEP_SIZE)
+                target_linear_X_velocity =\
+                    check_linear_limit_velocity(target_linear_X_velocity + LIN_VEL_STEP_SIZE)
                 status = status + 1
-                print_vels(target_linear_velocity, target_angular_velocity)
+                print_vels(target_linear_X_velocity, target_linear_Y_velocity, target_angular_velocity)
             elif key == 'x':
-                target_linear_velocity =\
-                    check_linear_limit_velocity(target_linear_velocity - LIN_VEL_STEP_SIZE)
+                target_linear_X_velocity =\
+                    check_linear_limit_velocity(target_linear_X_velocity - LIN_VEL_STEP_SIZE)
                 status = status + 1
-                print_vels(target_linear_velocity, target_angular_velocity)
+                print_vels(target_linear_X_velocity, target_linear_Y_velocity, target_angular_velocity)
             elif key == 'a':
+                target_linear_Y_velocity =\
+                    check_linear_limit_velocity(target_linear_Y_velocity + LIN_VEL_STEP_SIZE)
+                status = status + 1
+                print_vels(target_linear_X_velocity, target_linear_Y_velocity, target_angular_velocity)
+            elif key == 'd':
+                target_linear_Y_velocity =\
+                    check_linear_limit_velocity(target_linear_Y_velocity - LIN_VEL_STEP_SIZE)
+                status = status + 1
+                print_vels(target_linear_X_velocity, target_linear_Y_velocity, target_angular_velocity)                              
+            elif key == 'q':
                 target_angular_velocity =\
                     check_angular_limit_velocity(target_angular_velocity + ANG_VEL_STEP_SIZE)
                 status = status + 1
-                print_vels(target_linear_velocity, target_angular_velocity)
-            elif key == 'd':
+                print_vels(target_linear_X_velocity, target_linear_Y_velocity, target_angular_velocity)
+            elif key == 'e':
                 target_angular_velocity =\
                     check_angular_limit_velocity(target_angular_velocity - ANG_VEL_STEP_SIZE)
                 status = status + 1
-                print_vels(target_linear_velocity, target_angular_velocity)
+                print_vels(target_linear_X_velocity, target_linear_Y_velocity, target_angular_velocity)
             elif key == ' ' or key == 's':
-                target_linear_velocity = 0.0
-                control_linear_velocity = 0.0
+                target_linear_X_velocity = 0.0
+                target_linear_Y_velocity = 0.0    
                 target_angular_velocity = 0.0
+                control_linear_X_velocity = 0.0
+                control_linear_Y_velocity = 0.0
                 control_angular_velocity = 0.0
-                print_vels(target_linear_velocity, target_angular_velocity)
+                print_vels(target_linear_X_velocity, target_linear_Y_velocity, target_angular_velocity)
             else:
                 if (key == '\x03'):
                     break
@@ -185,13 +196,18 @@ def main():
 
             twist = Twist()
 
-            control_linear_velocity = make_simple_profile(
-                control_linear_velocity,
-                target_linear_velocity,
+            control_linear_X_velocity = make_simple_profile(
+                control_linear_X_velocity,
+                target_linear_X_velocity,
                 (LIN_VEL_STEP_SIZE / 2.0))
 
-            twist.linear.x = control_linear_velocity
-            twist.linear.y = 0.0
+            control_linear_Y_velocity = make_simple_profile(
+                control_linear_Y_velocity,
+                target_linear_Y_velocity,
+                (LIN_VEL_STEP_SIZE / 2.0))
+
+            twist.linear.x = control_linear_X_velocity
+            twist.linear.y = control_linear_Y_velocity
             twist.linear.z = 0.0
 
             control_angular_velocity = make_simple_profile(
