@@ -8,7 +8,7 @@ import time
 import csv
 import numpy as np
 
-ser = serial.Serial('COM3', 57600) #OpenCR Port COM3, MEGE Port COM4
+ser = serial.Serial('COM4', 57600) #OpenCR Port COM3, MEGE Port COM4
 
 J = 4 #조인트의 개수
 i = 0
@@ -22,10 +22,11 @@ while True:
             converted_value = ratio*np.array([list(map(float, line))])
             #joint_val = np.append(joint_val, converted_value)
             #아두이노가 받기 위해서 문자열로 데이터 변환. 구분자 : ','
-            trans_data = str(converted_value[0][0]) + "," + str(converted_value[0][1]) + "," + str(converted_value[0][2]) + "," + str(converted_value[0][3])
+            trans_data = str(int(converted_value[0][0])) + "," + str(int(converted_value[0][1])) + "," + str(int(converted_value[0][2])) + "," + str(int(converted_value[0][3]))
+            print(trans_data)
             trans_data = trans_data.encode()
             ser.write(trans_data)
-            time.sleep(1)
+            time.sleep(5)
             print(i)
             i = i+1
 

@@ -16,9 +16,14 @@
 
 /* Authors: Taehun Lim (Darby) */
 
-/* Editor: Hyounjun Oh */
+/* Editor: Hyounjun Oh 
+   E-mail : ohj_980918@naver.com
+   Jeonbuk-National University*/
 /* [수정사항]
-2023. 01. 28. 다이나믹셀 ID1 과 ID2 동시제어 */
+2023. 01. 28. 다이나믹셀 ID1 과 ID2 동시제어 
+2023. 02. 05. 다이나믹셀 ID1 ~ ID4 사다리꼴 프로파일 적용. 제어완료.
+2023. 02. 06. 조인트 값 파이썬으로부터 Serial2 포트로 받아오기.*/
+
 
 #include <DynamixelWorkbench.h>
 
@@ -35,9 +40,11 @@
 
 DynamixelWorkbench dxl_wb;
 
-double joint[3]; //조인트 값 담을 배열 선언.
+int joint[3]; //조인트 값 담을 배열 선언.
 int32_t get_position[3];
 int32_t get_desired_position[3];
+int home_position[4] = {2048,2048,2048,2048};
+int desired_position[4] = {4095,1350,800,3050};
 
 void setup() 
 {
@@ -122,82 +129,69 @@ void setup()
 
 void loop() 
 {
-  char input_data;
-  while(Serial.available())
+  if (Serial2.available())
   {
-    input_data = Serial.read();
-  }
+    String inputStr = Serial2.readStringUntil('\n');
+    Split(inputStr,',');
+    if (joint[2] == 58){
+      digitalWrite(13, HIGH);
+    }else{
+      digitalWrite(13, LOW);
+    };
 
-  int home_position[4] = {2048,2048,2048,2048};
-  //int desired_position[4] = {0, 0, 0, 0};
-  int desired_position[4] = {4095,1350,800,3050};
+    char input_data;
+    while(Serial.available())
+    {
+      input_data = Serial.read();
+    }
 
-
-
-  Serial.println("----------------------------------------"); 
-  Serial.println("Mode : 1");    
-  dxl_wb.goalPosition(JOINT_1, desired_position[0]);
-  dxl_wb.goalPosition(JOINT_2, desired_position[1]);
-  dxl_wb.goalPosition(JOINT_3, desired_position[2]);
-  dxl_wb.goalPosition(JOINT_4, desired_position[3]);
-  int delay_joint = maximum_calculation();
-  delay_motor(delay_joint);
-  Serial.println("complete");
-  Serial.println("----------------------------------------"); 
-  Serial.println("Mode : 0");
-  dxl_wb.goalPosition(JOINT_1, 0);
-  dxl_wb.goalPosition(JOINT_2, 0);
-  dxl_wb.goalPosition(JOINT_3, 0);
-  dxl_wb.goalPosition(JOINT_4, 0);
-  delay_joint = maximum_calculation();
-  delay_motor(delay_joint);
-  Serial.println("complete");
-  Serial.println("----------------------------------------"); 
-  Serial.println("Mode : 2");        
-  dxl_wb.goalPosition(JOINT_2, home_position[1]);
-  dxl_wb.goalPosition(JOINT_1, home_position[0]);
-  dxl_wb.goalPosition(JOINT_3, home_position[2]);
-  dxl_wb.goalPosition(JOINT_4, home_position[3]);
-  delay_joint = maximum_calculation();
-  delay_motor(delay_joint);
-  Serial.println("complete");
-
-  if(input_data == '1')
-  {
     Serial.println("----------------------------------------"); 
-    Serial.println("Mode : 1");    
-    dxl_wb.goalPosition(JOINT_1, desired_position[0]);
-    dxl_wb.goalPosition(JOINT_2, desired_position[1]);
-    dxl_wb.goalPosition(JOINT_3, desired_position[2]);
-    dxl_wb.goalPosition(JOINT_4, desired_position[3]);
+    Serial.println("Mode : From Python");    
+    dxl_wb.goalPosition(JOINT_1, joint[0]);
+    dxl_wb.goalPosition(JOINT_2, joint[1]);
+    dxl_wb.goalPosition(JOINT_3, joint[2]);
+    dxl_wb.goalPosition(JOINT_4, joint[3]);
     int delay_joint = maximum_calculation();
     delay_motor(delay_joint);
     Serial.println("complete");
-  }
-  if(input_data == '0')
-  {
-    Serial.println("----------------------------------------"); 
-    Serial.println("Mode : 0");
-    dxl_wb.goalPosition(JOINT_1, 0);
-    dxl_wb.goalPosition(JOINT_2, 0);
-    dxl_wb.goalPosition(JOINT_3, 0);
-    dxl_wb.goalPosition(JOINT_4, 0);
-    int delay_joint = maximum_calculation();
-    delay_motor(delay_joint);
-    Serial.println("complete");
-  }
-  if(input_data == '2')
-  {
-    Serial.println("----------------------------------------"); 
-    Serial.println("Mode : 2");     
-    
-    dxl_wb.goalPosition(JOINT_2, home_position[1]);
-    dxl_wb.goalPosition(JOINT_1, home_position[0]);
-    dxl_wb.goalPosition(JOINT_3, home_position[2]);
-    dxl_wb.goalPosition(JOINT_4, home_position[3]);
-    int delay_joint = maximum_calculation();
-    delay_motor(delay_joint);
-    Serial.println("complete");
+
+    if(input_data == '2')
+    {
+      Serial.println("----------------------------------------"); 
+      Serial.println("Mode : 1");    
+      dxl_wb.goalPosition(JOINT_1, desired_position[0]);
+      dxl_wb.goalPosition(JOINT_2, desired_position[1]);
+      dxl_wb.goalPosition(JOINT_3, desired_position[2]);
+      dxl_wb.goalPosition(JOINT_4, desired_position[3]);
+      int delay_joint = maximum_calculation();
+      delay_motor(delay_joint);
+      Serial.println("complete");
+    }
+    if(input_data == '0')
+    {
+      Serial.println("----------------------------------------"); 
+      Serial.println("Mode : Zero Position");
+      dxl_wb.goalPosition(JOINT_1, 0);
+      dxl_wb.goalPosition(JOINT_2, 0);
+      dxl_wb.goalPosition(JOINT_3, 0);
+      dxl_wb.goalPosition(JOINT_4, 0);
+      int delay_joint = maximum_calculation();
+      delay_motor(delay_joint);
+      Serial.println("complete");
+    }
+    if(input_data == '1')
+    {
+      Serial.println("----------------------------------------"); 
+      Serial.println("Mode : Home Position");     
+      
+      dxl_wb.goalPosition(JOINT_2, home_position[1]);
+      dxl_wb.goalPosition(JOINT_1, home_position[0]);
+      dxl_wb.goalPosition(JOINT_3, home_position[2]);
+      dxl_wb.goalPosition(JOINT_4, home_position[3]);
+      int delay_joint = maximum_calculation();
+      delay_motor(delay_joint);
+      Serial.println("complete");
+    }
   }
 }
 
@@ -253,3 +247,45 @@ int maximum_calculation(){
   Serial.println(index);
   return index;
 };
+
+void Split(String sData, char cSeparator)
+{	
+	int nCount = 0;
+	int nGetIndex = 0 ;
+ 
+	//임시저장
+	String sTemp = "";
+ 
+	//원본 복사
+	String sCopy = sData;
+  int i = 0;
+	while(true)
+	{
+		//구분자 찾기
+		nGetIndex = sCopy.indexOf(cSeparator);
+ 
+		//리턴된 인덱스가 있나?
+		if(-1 != nGetIndex)
+		{
+			//있다.
+ 
+			//데이터 넣고
+			sTemp = sCopy.substring(0, nGetIndex);
+      joint[i] = sTemp.toInt();
+		
+			//뺀 데이터 만큼 잘라낸다.
+			sCopy = sCopy.substring(nGetIndex + 1);
+		}
+		else
+		{
+			//없으면 마무리 한다.
+      joint[i] = sCopy.toInt();
+			break;
+		}
+ 
+		//다음 문자로~
+		++nCount;
+    ++i;
+	}
+ 
+}
