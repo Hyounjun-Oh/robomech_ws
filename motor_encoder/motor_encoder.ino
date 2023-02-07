@@ -9,50 +9,37 @@
 // 4 : 2652 Pulse
 //////////////////////////////////////////////////////////////////////////////////
 
-//Motor Control
-const int motor1_PWMPinA = 2;
-const int motor1_PWMPinB = 3;
-const int motor2_PWMPinA = 4;
-const int motor2_PWMPinB = 5;
-const int motor3_PWMPinA = 6;
-const int motor3_PWMPinB = 7;
-const int motor4_PWMPinA = 8;
-const int motor4_PWMPinB = 9;
-//Encoder Control
-const int encoder_1_pose = 0;
-const int encoder_2_pose = 0;
-const int encoder_3_pose = 0;
-const int encoder_4_pose = 0;
+// motor control pin
+const int motorDirPin_1 = 2; 
+const int motorPWMPin_1 = 3; 
+const int motorDirPin_2 = 4; 
+const int motorPWMPin_2 = 5; 
 
-const int motor1_Ecd_A = 10;
-const int motor1_Ecd_B = 11;
+//아두이노 메가 인터럽트 핀 2, 3, 18, 19, 20, 21
+// encoder pin
+const int encoderPinA_1 = 18;
+const int encoderPinB_1 = 19;
+const int encoderPinA_2 = 20;
+const int encoderPinB_2 = 21;
 
-const int motor2_Ecd_A = 12;
-const int motor2_Ecd_B = 13;
+// encoder pose
+int encoderPos_1 = 0;
+int encoderPos_2 = 0;
 
-const int motor3_Ecd_A = 14;
-const int motor3_Ecd_B = 15;
-
-const int motor4_Ecd_A = 16;
-const int motor4_Ecd_B = 17;
+float sampling_time = 0.1;
 
 const float ratio = 360./51./13.;
 
 // P control
-float Kp = 30;
+//float Kp = 30;
+float targetrpm[4] = {14, 14, 14, 14};// serial로 받아온 rpm값
 
-// Interrupt Function
-void doEncoderA1(){encoderPos += (digitalRead(motor1_Ecd_A)==digitalRead(motor1_Ecd_B))?1:-1;}
-void doEncoderB1(){encoderPos += (digitalRead(motor1_Ecd_A)==digitalRead(motor1_Ecd_B))?-1:1;}
 
-void doEncoderA2(){encoderPos += (digitalRead(motor2_Ecd_A)==digitalRead(motor2_Ecd_B))?1:-1;}
-void doEncoderB2(){encoderPos += (digitalRead(motor2_Ecd_A)==digitalRead(motor2_Ecd_B))?-1:1;}
-
-void doEncoderA3(){encoderPos += (digitalRead(motor3_Ecd_A)==digitalRead(motor3_Ecd_B))?1:-1;}
-void doEncoderB3(){encoderPos += (digitalRead(motor3_Ecd_A)==digitalRead(motor3_Ecd_B))?-1:1;}
-
-void doEncoderA4(){encoderPos += (digitalRead(motor4_Ecd_A)==digitalRead(motor4_Ecd_B))?1:-1;}
-void doEncoderB4(){encoderPos += (digitalRead(motor4_Ecd_A)==digitalRead(motor4_Ecd_B))?-1:1;}
+//안변해도 됨
+void doEncoderA_1(){  encoderPos_1 += (digitalRead(encoderPinA)==digitalRead(encoderPinB))?1:-1;}
+void doEncoderB_1(){  encoderPos_1 += (digitalRead(encoderPinA)==digitalRead(encoderPinB))?-1:1;}
+void doEncoderA_2(){  encoderPos_2 += (digitalRead(encoderPinA)==digitalRead(encoderPinB))?1:-1;}
+void doEncoderB_2(){  encoderPos_2 += (digitalRead(encoderPinA)==digitalRead(encoderPinB))?-1:1;}
 
 void doMotor(bool dir, int vel){
   digitalWrite(motorDirPin, dir);
@@ -60,46 +47,27 @@ void doMotor(bool dir, int vel){
 }
 
 void setup() {
-  // put your setup code here, to run once:
-  pinMode(motor1_Ecd_A, INPUT_PULLUP);
-  attachInterrupt(0, doEncoderA1, CHANGE);
-  pinMode(motor1_Ecd_B, INPUT_PULLUP);
-  attachInterrupt(1,  doEncoderB1, CHANGE);
-  pinMode(motor1_DirPin, OUTPUT);
-
-  pinMode(motor2_Ecd_A, INPUT_PULLUP);
-  attachInterrupt(0, doEncoderA1, CHANGE);
-  pinMode(motor2_Ecd_B, INPUT_PULLUP);
-  attachInterrupt(1,  doEncoderB1, CHANGE);
-  pinMode(motor2_DirPin, OUTPUT);
-
-  pinMode(motor3_Ecd_A, INPUT_PULLUP);
-  attachInterrupt(0, doEncoderA1, CHANGE);
-  pinMode(motor3_Ecd_B, INPUT_PULLUP);
-  attachInterrupt(1,  doEncoderB1, CHANGE);
-  pinMode(motor3_DirPin, OUTPUT);
-
-  pinMode(motor4_Ecd_A, INPUT_PULLUP);
-  attachInterrupt(0, doEncoderA1, CHANGE);
-  pinMode(motor4_Ecd_B, INPUT_PULLUP);
-  attachInterrupt(1,  doEncoderB1, CHANGE);
-  pinMode(motor4_DirPin, OUTPUT);
-
-  Serial.begin(9600);
-
-}
-// 수정 필요!! 23.01.15
-void loop() {
-  // put your main code here, to run repeatedly:
-  float targetDeg1 = 360;
-
-  float motorDeg1 = float(encoder_1_pose)*ratio;
-  float motorDeg2 = float(encoder_2_pose)*ratio;
-  float motorDeg3 = float(encoder_3_pose)*ratio;
-  float motorDeg4 = float(encoder_4_pose)*ratio;      
+  //1번 모터 
+  pinMode(encoderPinA_1, INPUT_PULLUP);
+  attachInterrupt(0, doEncoderA_1, CHANGE);
+  pinMode(encoderPinB_1, INPUT_PULLUP);
+  attachInterrupt(1, doEncoderB_1, CHANGE);
+  pinMode(encoderPinA_2, INPUT_PULLUP);
+  attachInterrupt(0, doEncoderA_2, CHANGE);
+  pinMode(encoderPinB_2, INPUT_PULLUP);
+  attachInterrupt(1, doEncoderB_2, CHANGE);
  
-  float error1 = targetDeg1 - motorDeg1;
-  float control = Kp*error1;
+  pinMode(motorDirPin_1, OUTPUT);
+  pinMode(motorDirPin_2, OUTPUT);
+
+  Serial.begin(57600);
+  Serial2.begin(57600); // 아두이노2로 목표 rpm 데이터 전달목적
+}
+
+void loop() {
+  float motorDeg = float(encoderPos)*ratio;
+  float error = targetDeg - motorDeg;
+  float control = Kp*error;
 
   doMotor( (control>=0)?HIGH:LOW, min(abs(control), 255));
 
