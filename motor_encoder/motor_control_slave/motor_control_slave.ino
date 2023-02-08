@@ -7,6 +7,7 @@
 // Gear Ratio : 51
 // Pulse : 663
 // 4 : 2652 Pulse
+// slave Arduino
 //////////////////////////////////////////////////////////////////////////////////
 #include <MsTimer2.h>
 
@@ -43,7 +44,7 @@ const float ratio = 360./51./13.;
 float Kp = 30;
 
 //Target RPM
-float targetRPM[4] = {14, 14};//serial로 받아온 rpm값
+float targetRPM[1] = {0};//serial로 받아온 rpm값
 
 // Inturrupt Function 체배 감지되면 카운트 업.
 void doEncoderA_1(){  encoderPos_1 += (digitalRead(encoderPinA_1)==digitalRead(encoderPinB_1))?1:-1;encoderCount_1 += 1;}
@@ -58,20 +59,21 @@ void doMotor(int motor_dir_pin, int motor_rpm_pin ,bool dir, int vel){
 
 // getPRM1과 2로 나누어서 각각 타이머인터럽트 활성화 하기.
 float getRPM_1(){
-  edge = encoderCount_1;
-  float RPM = (60*edge)/(sampling_time * PPR * chebae));
+  int edge = encoderCount_1;
+  float RPM = (60*edge)/(sampling_time * PPR * chebae);
   encoderCount_1 = 0;  
   return RPM;
 }
 
 float getRPM_2(){
-  edge = encoderCount_2;
-  float RPM = (60*edge)/(sampling_time * PPR * chebae));
+  int edge = encoderCount_2;
+  float RPM = (60*edge)/(sampling_time * PPR * chebae);
   encoderCount_2 = 0;
   return RPM;
 }
 
 void setup() {
+  Serial2.begin(38400); // From Master Arduino
   //1번 모터 
   pinMode(encoderPinA_1, INPUT_PULLUP);
   attachInterrupt(0, doEncoderA_1, CHANGE);
@@ -90,13 +92,18 @@ void setup() {
   MsTimer2::start();// 타이머 인터럽트 start
   MsTimer2::set(100, getRPM_2); //getRPM함수를 0.1초마다 실행
   MsTimer2::start();// 타이머 인터럽트 start
-  Serial.begin(57600);
-  Serial2.begin(57600); // 아두이노2로 목표 rpm 데이터 전달목적
 }
 
 void loop() {
-  float motorRPM_1 = getRPM();
-  float motorRPM_2 = getRPM();
+
+  if(Serial2.available() > 0)
+  {
+    String inputStr = Serial2.readStringUntil('\n');
+    Split(inputStr,',');
+  }
+
+  float motorRPM_1 = getRPM_1();
+  float motorRPM_2 = getRPM_2();
   float rpm_error_1 = targetRPM[0] - motorRPM_1;
   float rpm_error_2 = targetRPM[1] - motorRPM_2;
   float control_1 = Kp*rpm_error_1;
@@ -114,4 +121,47 @@ void loop() {
   //Serial.print(control);
   //Serial.print("    motorVel : ");
   //Serial.println(min(abs(control), 255));
+}
+
+void Split(String sData, char cSeparator)
+{	
+	int nCount = 0;
+	int nGetIndex = 0 ;
+ 
+	//임시저장
+	String sTemp = "";
+ 
+	//원본 복사
+	String sCopy = sData;
+  int i = 0;
+  int j = 0;
+	while(true)
+	{
+		//구분자 찾기
+		nGetIndex = sCopy.indexOf(cSeparator);
+ 
+		//리턴된 인덱스가 있나?
+		if((-1 != nGetIndex) || (j>1))
+		{
+			//있다.
+      j+=1;
+			//데이터 넣고
+			sTemp = sCopy.substring(0, nGetIndex);
+      targetRPM[i] = sTemp.toFloat();
+		
+			//뺀 데이터 만큼 잘라낸다.
+			sCopy = sCopy.substring(nGetIndex + 1);
+		}
+		else
+		{
+			//없으면 마무리 한다.
+      targetRPM[i] = sCopy.toFloat();
+			break;
+		}
+ 
+		//다음 문자로~
+		++nCount;
+    ++i;
+	}
+ 
 }
