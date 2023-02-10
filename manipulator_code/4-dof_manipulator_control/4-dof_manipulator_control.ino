@@ -43,8 +43,10 @@ DynamixelWorkbench dxl_wb;
 int joint[3]; //조인트 값 담을 배열 선언.
 int32_t get_position[3];
 int32_t get_desired_position[3];
-int home_position[4] = {2048,2048,2048,2048};
-int desired_position[4] = {4095,1350,800,3050};
+int home_position[4] = {2048,2400,1300,2500};
+// int home_position[4] = {2048,2048,2048,2048};
+int desired_position[4] = {3000,2300,1500,2300};
+int desired_position_2[4] = {3000,2048,2048,1024};
 
 void setup() 
 {
@@ -129,70 +131,72 @@ void setup()
 
 void loop() 
 {
-  if (Serial2.available())
+  // if (Serial2.available())
+  // {
+  //   String inputStr = Serial2.readStringUntil('\n');
+  //   Split(inputStr,',');
+  //   if (joint[2] == 58){
+  //     digitalWrite(13, HIGH);
+  //   }else{
+  //     digitalWrite(13, LOW);
+  //   };
+
+  char input_data;
+  while(Serial.available())
   {
-    String inputStr = Serial2.readStringUntil('\n');
-    Split(inputStr,',');
-    if (joint[2] == 58){
-      digitalWrite(13, HIGH);
-    }else{
-      digitalWrite(13, LOW);
-    };
-
-    char input_data;
-    while(Serial.available())
-    {
-      input_data = Serial.read();
-    }
-
-    Serial.println("----------------------------------------"); 
-    Serial.println("Mode : From Python");    
-    dxl_wb.goalPosition(JOINT_1, joint[0]);
-    dxl_wb.goalPosition(JOINT_2, joint[1]);
-    dxl_wb.goalPosition(JOINT_3, joint[2]);
-    dxl_wb.goalPosition(JOINT_4, joint[3]);
-    int delay_joint = maximum_calculation();
-    delay_motor(delay_joint);
-    Serial.println("complete");
-
-    if(input_data == '2')
-    {
-      Serial.println("----------------------------------------"); 
-      Serial.println("Mode : 1");    
-      dxl_wb.goalPosition(JOINT_1, desired_position[0]);
-      dxl_wb.goalPosition(JOINT_2, desired_position[1]);
-      dxl_wb.goalPosition(JOINT_3, desired_position[2]);
-      dxl_wb.goalPosition(JOINT_4, desired_position[3]);
-      int delay_joint = maximum_calculation();
-      delay_motor(delay_joint);
-      Serial.println("complete");
-    }
-    if(input_data == '0')
-    {
-      Serial.println("----------------------------------------"); 
-      Serial.println("Mode : Zero Position");
-      dxl_wb.goalPosition(JOINT_1, 0);
-      dxl_wb.goalPosition(JOINT_2, 0);
-      dxl_wb.goalPosition(JOINT_3, 0);
-      dxl_wb.goalPosition(JOINT_4, 0);
-      int delay_joint = maximum_calculation();
-      delay_motor(delay_joint);
-      Serial.println("complete");
-    }
-    if(input_data == '1')
-    {
-      Serial.println("----------------------------------------"); 
-      Serial.println("Mode : Home Position");     
-      
-      dxl_wb.goalPosition(JOINT_2, home_position[1]);
-      dxl_wb.goalPosition(JOINT_1, home_position[0]);
-      dxl_wb.goalPosition(JOINT_3, home_position[2]);
-      dxl_wb.goalPosition(JOINT_4, home_position[3]);
-      int delay_joint = maximum_calculation();
-      delay_motor(delay_joint);
-      Serial.println("complete");
-    }
+    input_data = Serial.read();
   }
+
+  // Serial.println("----------------------------------------"); 
+  // Serial.println("Mode : From Python");    
+  // dxl_wb.goalPosition(JOINT_1, joint[0]);
+  // dxl_wb.goalPosition(JOINT_2, joint[1]);
+  // dxl_wb.goalPosition(JOINT_3, joint[2]);
+  // dxl_wb.goalPosition(JOINT_4, joint[3]);
+  // int delay_joint = maximum_calculation();
+  // delay_motor(delay_joint);
+  // Serial.println("complete");
+  if(input_data == '3')
+  {
+    Serial.println("----------------------------------------"); 
+    Serial.println("Mode : 1");    
+    dxl_wb.goalPosition(JOINT_1, desired_position_2[0]);
+    dxl_wb.goalPosition(JOINT_2, desired_position_2[1]);
+    dxl_wb.goalPosition(JOINT_3, desired_position_2[2]);
+    dxl_wb.goalPosition(JOINT_4, desired_position_2[3]);
+    //int delay_joint = maximum_calculation();
+    //delay_motor(delay_joint);
+    delay(5000);
+    Serial.println("complete");
+  }
+  if(input_data == '2')
+  {
+    Serial.println("----------------------------------------"); 
+    Serial.println("Mode : 1");    
+    dxl_wb.goalPosition(JOINT_1, desired_position[0]);
+    dxl_wb.goalPosition(JOINT_2, desired_position[1]);
+    dxl_wb.goalPosition(JOINT_3, desired_position[2]);
+    dxl_wb.goalPosition(JOINT_4, desired_position[3]);
+    //int delay_joint = maximum_calculation();
+    //delay_motor(delay_joint);
+    delay(5000);
+    Serial.println("complete");
+  }
+  if(input_data == '1')
+  {
+    Serial.println("----------------------------------------"); 
+    Serial.println("Mode : Home Position");     
+    
+    dxl_wb.goalPosition(JOINT_2, home_position[1]);
+    dxl_wb.goalPosition(JOINT_1, home_position[0]);
+    dxl_wb.goalPosition(JOINT_3, home_position[2]);
+    dxl_wb.goalPosition(JOINT_4, home_position[3]);
+    //int delay_joint = maximum_calculation();
+    //delay_motor(delay_joint);
+    delay(5000);
+    Serial.println("complete");
+  }
+  //}
 }
 
 void delay_motor(int joint_ID){
