@@ -1,5 +1,5 @@
-const int motorDirPin = 2; // L298 Input 3, L9110 A-IA
-const int motorPWMPin = 3; // L298 Input 4, L9110 A-IB
+const int motorDirPin = 8; // L298 Input 3, L9110 A-IA
+const int motorPWMPin = 9; // L298 Input 4, L9110 A-IB
 
 /* 
  *   모터 제어 함수
