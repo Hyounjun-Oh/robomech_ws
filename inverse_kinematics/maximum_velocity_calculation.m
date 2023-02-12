@@ -9,12 +9,13 @@
 %  275  0       -0.6    0
 %  315  -0.3     0.3    0]
 
+% Motor Max speed = 120rpm =  12.566 370 614 359 rad/s
 % Max Vx, Vy = 0.3 m/s
 % Max diagonal direction 0.6 m/s
 % Max Rotational direction 1.7647 rad/s
 %%
 %rad/s
-w = [5.6 0 0 5.6];
+w = [4 8 8 4];
 
 % The data of real robot
 % a = 0.395;
