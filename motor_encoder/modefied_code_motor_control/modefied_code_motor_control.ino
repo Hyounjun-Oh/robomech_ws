@@ -40,7 +40,9 @@ float rpm_motor_2 = 0;
 // Variable for angular velocity measurement
 float ang_velocity_1 = 0;
 float ang_velocity_1_deg = 0;
- 
+float ang_velocity_2 = 0;
+float ang_velocity_2_deg = 0;
+
 const float rpm_to_radians = 0.10471975512;
 const float rad_to_deg = 57.29578;
 
@@ -76,8 +78,8 @@ void loop() {
   float control_1 = 0;
   float control_2 = 0;
 
-  doMotor(motorDirPin_1, motorPWMPin_1,(control_1>=0)?HIGH:LOW, min(abs(control_1), 255));
-  doMotor(motorDirPin_2, motorPWMPin_2,(control_2>=0)?HIGH:LOW, min(abs(control_2), 255));
+  doMotor(MOT_DIR_PIN_1, MOT_PWM_PIN_1,(control_1>=0)?HIGH:LOW, min(abs(control_1), 255));
+  doMotor(MOT_DIR_PIN_1, MOT_PWM_PIN_2,(control_2>=0)?HIGH:LOW, min(abs(control_2), 255));
 }
  
 // Increment the number of pulses by 1
