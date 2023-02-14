@@ -47,6 +47,7 @@ int home_position[4] = {2048,2400,1300,2500};
 // int home_position[4] = {2048,2048,2048,2048};
 int desired_position[4] = {3000,2300,1500,2300};
 int desired_position_2[4] = {3000,2048,2048,1024};
+int desired_position_final[36] = {2048,2400,1300,2500, 2048, 2048, 2048, 1024, 1538, 2600, 2100, 1800, 1538, 2048, 1900, 1750, 2538, 2100, 2500, 3072, 2538, 2100, 2500, 1024, 2538, 2700, 1500, 3072, 2538, 2100, 2500, 1024};
 
 void setup() 
 {
@@ -128,7 +129,7 @@ void setup()
   dxl_wb.itemWrite(JOINT_4, "Profile_Acceleration", 4989);
   dxl_wb.itemWrite(JOINT_4, "Profile_Velocity", 3506); 
 }
-
+int i = 1;
 void loop() 
 {
   // if (Serial2.available())
@@ -146,16 +147,29 @@ void loop()
   {
     input_data = Serial.read();
   }
+  for (i;i < 8;i=i+1){
+    Serial.println("----------------------------------------"); 
+    Serial.println("Mode : From Python");    
+    dxl_wb.goalPosition(JOINT_1, desired_position_final[i*4-4]);
+    dxl_wb.goalPosition(JOINT_2, desired_position_final[i*4-3]);
+    dxl_wb.goalPosition(JOINT_3, desired_position_final[i*4-2]);
+    dxl_wb.goalPosition(JOINT_4, desired_position_final[i*4-1]);
+    //int delay_joint = maximum_calculation();
+    //delay_motor(delay_joint);
+    delay(3300);
+    Serial.println("complete");
+  }
+  Serial.println("----------------------------------------"); 
+  Serial.println("Mode : From Python");    
+  dxl_wb.goalPosition(JOINT_1, home_position[0]);
+  dxl_wb.goalPosition(JOINT_2, home_position[1]);
+  dxl_wb.goalPosition(JOINT_3, home_position[2]);
+  dxl_wb.goalPosition(JOINT_4, home_position[3]);
+  //int delay_joint = maximum_calculation();
+  //delay_motor(delay_joint);
+  delay(5000);
+  Serial.println("complete");
 
-  // Serial.println("----------------------------------------"); 
-  // Serial.println("Mode : From Python");    
-  // dxl_wb.goalPosition(JOINT_1, joint[0]);
-  // dxl_wb.goalPosition(JOINT_2, joint[1]);
-  // dxl_wb.goalPosition(JOINT_3, joint[2]);
-  // dxl_wb.goalPosition(JOINT_4, joint[3]);
-  // int delay_joint = maximum_calculation();
-  // delay_motor(delay_joint);
-  // Serial.println("complete");
   if(input_data == '3')
   {
     Serial.println("----------------------------------------"); 

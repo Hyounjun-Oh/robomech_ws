@@ -110,10 +110,10 @@ void setup() {
 void loop() {
   //float rpm_error_1 = targetRPM[0] - motorRPM_1;
   //float rpm_error_2 = targetRPM[1] - motorRPM_2;
-  float control_1 = 0;//Kp*rpm_error_1;
-  float control_2 = 0;//Kp*rpm_error_2;
+  float control_1 = 0;//Kp*rpm_error_1; -254 ~ 254
+  float control_2 = 0;//Kp*rpm_error_2; -254 ~ 254
 
   doMotor(motorDirPin_1, motorPWMPin_1,(control_1>=0)?HIGH:LOW, min(abs(control_1), 255));
   doMotor(motorDirPin_2, motorPWMPin_2,(control_2>=0)?HIGH:LOW, min(abs(control_2), 255));
-
+  delay(100);
 }

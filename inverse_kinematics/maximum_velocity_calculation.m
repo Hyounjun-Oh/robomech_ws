@@ -15,7 +15,7 @@
 % Max Rotational direction 1.7647 rad/s
 %%
 %rad/s
-w = [4 8 8 4];
+w = [12 0 0 12];
 
 % The data of real robot
 % a = 0.395;
