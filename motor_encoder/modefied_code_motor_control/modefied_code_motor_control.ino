@@ -16,10 +16,10 @@
 // Tracks the direction of rotation.
 #define ENC_IN_1_B 19 //4
 #define ENC_IN_2_B 21 //2
-#define MOT_DIR_PIN_1 4
-#define MOT_PWM_PIN_1 5
-#define MOT_DIR_PIN_2 6
-#define MOT_PWM_PIN_2 7
+#define MOT_DIR_PIN_1 2
+#define MOT_PWM_PIN_1 3
+#define MOT_DIR_PIN_2 4
+#define MOT_PWM_PIN_2 5
  
 // True = Forward; False = Reverse
 boolean Direction_motor_1 = true;
@@ -53,13 +53,17 @@ void setup() {
  
   // Open the serial port at 9600 bps
   Serial.begin(115200);
-  Serial2.begin(38400);
+  Serial2.begin(115200);
  
   // Set pin states of the encoder
   pinMode(ENC_IN_1_A , INPUT_PULLUP);
   pinMode(ENC_IN_1_B , INPUT);
   pinMode(ENC_IN_2_A , INPUT_PULLUP);
   pinMode(ENC_IN_2_B , INPUT);
+  pinMode(MOT_DIR_PIN_1, OUTPUT);
+  pinMode(MOT_PWM_PIN_1, OUTPUT);
+  pinMode(MOT_DIR_PIN_1, OUTPUT);
+  pinMode(MOT_PWM_PIN_1, OUTPUT);
  
   // Every time the pin goes high, this is a pulse
   attachInterrupt(digitalPinToInterrupt(ENC_IN_1_A), motor_1_pulse, RISING);
@@ -75,11 +79,11 @@ void loop() {
     String inputStr = Serial.readStringUntil('\n');
     Split(inputStr,',');
   }
-  float control_1 = 0;
-  float control_2 = 0;
+  float control_1 = targetRPM[0];
+  float control_2 = targetRPM[1];
+  doMotor_2(MOT_DIR_PIN_2, MOT_PWM_PIN_2,(control_2>=0)?HIGH:LOW, min(abs(control_2), 255));
+  doMotor_1(MOT_DIR_PIN_1, MOT_PWM_PIN_1,(control_1>=0)?HIGH:LOW, min(abs(control_1), 255));
 
-  doMotor(MOT_DIR_PIN_1, MOT_PWM_PIN_1,(control_1>=0)?HIGH:LOW, min(abs(control_1), 255));
-  doMotor(MOT_DIR_PIN_1, MOT_PWM_PIN_2,(control_2>=0)?HIGH:LOW, min(abs(control_2), 255));
 }
  
 // Increment the number of pulses by 1
@@ -121,7 +125,11 @@ void motor_2_pulse() {
     motor_2_pulse_count--;
   }
 }
-void doMotor(int motor_dir_pin, int motor_rpm_pin ,bool dir, int vel){
+void doMotor_1(int motor_dir_pin, int motor_rpm_pin ,bool dir, int vel){
+  digitalWrite(motor_dir_pin, dir);
+  analogWrite(motor_rpm_pin, dir?(255 - vel):vel);
+}
+void doMotor_2(int motor_dir_pin, int motor_rpm_pin ,bool dir, int vel){
   digitalWrite(motor_dir_pin, dir);
   analogWrite(motor_rpm_pin, dir?(255 - vel):vel);
 }

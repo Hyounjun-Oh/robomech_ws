@@ -8,8 +8,6 @@ const int motorPWMPin_2 = 7;
 
 //아두이노 메가 인터럽트 핀 2, 3, 18, 19, 20, 21
 // encoder pin
-const int encoderPin_count_1 = 2; //0
-const int encoderPin_count_2 = 3; //1
 const int encoderPinA_1 = 18; //5
 const int encoderPinB_1 = 19; //4
 const int encoderPinA_2 = 20; //3
@@ -38,7 +36,7 @@ int edge_2 = 0;
 float motorRPM_1 = 0;
 float motorRPM_2 = 0;
 //Target RPM
-float targetRPM[2] = {0,0};//serial로 받아온 rpm값
+float targetRPM[2] = {100.0, 100.0};//serial로 받아온 rpm값
 String slaveData;
 
 // Inturrupt Function 체배 감지되면 카운트 업.
@@ -51,22 +49,22 @@ void doMotor(int motor_dir_pin, int motor_rpm_pin ,bool dir, int vel){
   digitalWrite(motor_dir_pin, dir);
   analogWrite(motor_rpm_pin, dir?(255 - vel):vel);
 }
-void getRPM(){
-  edge_1 = encoderCount_1;
-  motorRPM_1 = (60*edge_1)/132.6;
-  
-  edge_2 = encoderCount_2;
-  motorRPM_2 = (60*edge_2)/132.6;
-
-  Serial.println("------------------------------");  
-  Serial.print("1 : ");
-  Serial.println(motorRPM_1);
-  Serial.print("2 : ");
-  Serial.println(motorRPM_2);
-  Serial.println("------------------------------");
-  encoderCount_1 = 0;
-  encoderCount_2 = 0;
-}
+//void getRPM(){
+//  edge_1 = encoderCount_1;
+//  motorRPM_1 = (60*edge_1)/132.6;
+//  
+//  edge_2 = encoderCount_2;
+//  motorRPM_2 = (60*edge_2)/132.6;
+//
+//  Serial.println("------------------------------");  
+//  Serial.print("1 : ");
+//  Serial.println(motorRPM_1);
+//  Serial.print("2 : ");
+//  Serial.println(motorRPM_2);
+//  Serial.println("------------------------------");
+//  encoderCount_1 = 0;
+//  encoderCount_2 = 0;
+//}
 
 
 // void motorPID(){    //10ms마다 호출 
@@ -87,7 +85,7 @@ void getRPM(){
 // }
 
 void setup() {
-  Serial.begin(115200); // From Python
+  Serial.begin(38400); // From Python
   Serial2.begin(38400); // To slave Arduino
   //1번 모터 
   pinMode(encoderPinA_1, INPUT_PULLUP);
@@ -103,17 +101,65 @@ void setup() {
   pinMode(motorDirPin_1, OUTPUT);
   pinMode(motorDirPin_2, OUTPUT);
 
-  MsTimer2::set(100, getRPM); //getRPM함수를 0.1초마다 실행
-  MsTimer2::start();// 타이머 인터럽트 start
+//  MsTimer2::set(100, getRPM); //getRPM함수를 0.1초마다 실행
+//  MsTimer2::start();// 타이머 인터럽트 start
 }
 
 void loop() {
+//  if(Serial.available() > 0)
+//  {
+//    String inputStr = Serial.readStringUntil('\n');
+//    Split(inputStr,',');
+//  }
   //float rpm_error_1 = targetRPM[0] - motorRPM_1;
   //float rpm_error_2 = targetRPM[1] - motorRPM_2;
-  float control_1 = 0;//Kp*rpm_error_1;
-  float control_2 = 0;//Kp*rpm_error_2;
+  float control_1 = targetRPM[0];//Kp*rpm_error_1;
+  float control_2 = targetRPM[1];//Kp*rpm_error_2;
 
   doMotor(motorDirPin_1, motorPWMPin_1,(control_1>=0)?HIGH:LOW, min(abs(control_1), 255));
   doMotor(motorDirPin_2, motorPWMPin_2,(control_2>=0)?HIGH:LOW, min(abs(control_2), 255));
+  delay(1000);
+}
 
+void Split(String sData, char cSeparator)
+{	
+	int nCount = 0;
+	int nGetIndex = 0 ;
+ 
+	//임시저장
+	String sTemp = "";
+ 
+	//원본 복사
+	String sCopy = sData;
+  int i = 0;
+  int j = 0;
+	while(true)
+	{
+		//구분자 찾기
+		nGetIndex = sCopy.indexOf(cSeparator);
+ 
+		//리턴된 인덱스가 있나?
+		if((-1 != nGetIndex) || (j>1))
+		{
+			//있다.
+      j+=1;
+			//데이터 넣고
+			sTemp = sCopy.substring(0, nGetIndex);
+      targetRPM[i] = sTemp.toFloat();
+		
+			//뺀 데이터 만큼 잘라낸다.
+			sCopy = sCopy.substring(nGetIndex + 1);
+		}
+		else
+		{
+			//없으면 마무리 한다.
+      targetRPM[i] = sCopy.toFloat();
+			break;
+		}
+ 
+		//다음 문자로~
+		++nCount;
+    ++i;
+	}
+ 
 }

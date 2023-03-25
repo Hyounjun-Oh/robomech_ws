@@ -49,10 +49,9 @@ else:
     import tty
 
 MAX_LIN = 0.3
-MAX_DIA = 0.6
-MAX_ROT = 1.7
-LIN_VEL_STEP_SIZE = 0.01
-ANG_VEL_STEP_SIZE = 0.1
+MAX_ROT = 4.0
+LIN_VEL_STEP_SIZE = 0.3
+ANG_VEL_STEP_SIZE = 0.3
 
 msg = """
 혼자서도 잘해요
