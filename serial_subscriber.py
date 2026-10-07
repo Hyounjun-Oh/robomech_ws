@@ -1,11 +1,26 @@
+# 아두이노(serial_publish)가 보내는 "a b c/d e f" 형식의 데이터를 읽어 출력한다.
+import argparse
+
 import serial
 
-ser = serial.Serial(port='COM4',baudrate=9600)
 
-while ser.readable():
-    line = ser.readline()
-    splited_first = line[:len(line)-2].decode().split('/')
-    data_1 = list(map(float, splited_first[0].split(' ')))
-    data_2 = list(map(float, splited_first[1].split(' ')))
-    print(data_1)
-    print(data_2)
+def parse_line(line):
+    """b'1 2.5 3/4 5.5 6\\r\\n' -> [[1.0, 2.5, 3.0], [4.0, 5.5, 6.0]]"""
+    groups = line.decode().strip().split('/')
+    return [list(map(float, group.split())) for group in groups]
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--port', default='COM4')
+    parser.add_argument('--baudrate', type=int, default=9600)
+    args = parser.parse_args()
+
+    ser = serial.Serial(port=args.port, baudrate=args.baudrate)
+    while ser.readable():
+        for data in parse_line(ser.readline()):
+            print(data)
+
+
+if __name__ == '__main__':
+    main()
