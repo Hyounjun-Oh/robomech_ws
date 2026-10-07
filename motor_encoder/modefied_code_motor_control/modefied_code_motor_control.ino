@@ -2,204 +2,158 @@
  * Author: Automatic Addison
  * Website: https://automaticaddison.com
  * Description: Calculate the angular velocity in radians/second of a DC motor
- * with a built-in encoder (forward = positive; reverse = negative) 
+ * with a built-in encoder (forward = positive; reverse = negative)
+ *
+ * [Serial 프로토콜] Python -> "cmd1,cmd2,cmd3,cmd4\n"
+ *   앞의 2개는 이 보드의 모터 1, 2에 사용하고 나머지("cmd3,cmd4")는 Serial2로 slave에 전달한다.
  */
- 
-// Motor encoder output pulses per 360 degree revolution (measured manually)
 #include <MsTimer2.h>
-#define ENC_COUNT_REV 1326
- 
+
+#define MOTOR_COUNT 2
+
+// Motor encoder output pulses per 360 degree revolution (measured manually)
+const int ENC_COUNT_REV = 1326;
+
 // Encoder output to Arduino Interrupt pin. Tracks the pulse count.
-#define ENC_IN_1_A 18 //5
-#define ENC_IN_2_A 20 //3
+const int encoderPinA[MOTOR_COUNT] = {18, 20};
 // Other encoder output to Arduino to keep track of wheel direction
-// Tracks the direction of rotation.
-#define ENC_IN_1_B 19 //4
-#define ENC_IN_2_B 21 //2
-#define MOT_DIR_PIN_1 2
-#define MOT_PWM_PIN_1 3
-#define MOT_DIR_PIN_2 4
-#define MOT_PWM_PIN_2 5
- 
-// True = Forward; False = Reverse
-boolean Direction_motor_1 = true;
-boolean Direction_motor_2 = true;
-// Keep track of the number of right wheel pulses
-volatile long motor_1_pulse_count = 0;
-volatile long motor_2_pulse_count = 0;
-// One-second interval for measurements
-int interval = 100;
-  
-// Counters for milliseconds during interval
-long previousMillis = 0;
-long currentMillis = 0;
- 
-// Variable for RPM measuerment
-float rpm_motor_1 = 0;
-float rpm_motor_2 = 0;
-// Variable for angular velocity measurement
-float ang_velocity_1 = 0;
-float ang_velocity_1_deg = 0;
-float ang_velocity_2 = 0;
-float ang_velocity_2_deg = 0;
+const int encoderPinB[MOTOR_COUNT] = {19, 21};
+const int motorDirPin[MOTOR_COUNT] = {2, 4};
+const int motorPWMPin[MOTOR_COUNT] = {3, 5};
+
+// RPM 측정 주기
+const unsigned long RPM_INTERVAL_MS = 100;
 
 const float rpm_to_radians = 0.10471975512;
 const float rad_to_deg = 57.29578;
 
-float targetRPM[2] = {0,0};//serial로 받아온 rpm값
-String slaveData;
+// Keep track of the number of wheel pulses (forward = +, reverse = -)
+volatile long pulseCount[MOTOR_COUNT] = {0, 0};
+// 타이머 인터럽트가 측정 주기마다 저장하는 펄스 수와 갱신 플래그
+volatile long measuredPulses[MOTOR_COUNT] = {0, 0};
+volatile bool rpmUpdated = false;
 
-void setup() {
- 
-  // Open the serial port at 9600 bps
-  Serial.begin(115200);
-  Serial2.begin(115200);
- 
-  // Set pin states of the encoder
-  pinMode(ENC_IN_1_A , INPUT_PULLUP);
-  pinMode(ENC_IN_1_B , INPUT);
-  pinMode(ENC_IN_2_A , INPUT_PULLUP);
-  pinMode(ENC_IN_2_B , INPUT);
-  pinMode(MOT_DIR_PIN_1, OUTPUT);
-  pinMode(MOT_PWM_PIN_1, OUTPUT);
-  pinMode(MOT_DIR_PIN_1, OUTPUT);
-  pinMode(MOT_PWM_PIN_1, OUTPUT);
- 
-  // Every time the pin goes high, this is a pulse
-  attachInterrupt(digitalPinToInterrupt(ENC_IN_1_A), motor_1_pulse, RISING);
-  attachInterrupt(digitalPinToInterrupt(ENC_IN_2_A), motor_2_pulse, RISING);
+float targetRPM[MOTOR_COUNT] = {0, 0}; //serial로 받아온 rpm값
 
-  MsTimer2::set(100, getRPM); //getRPM함수를 0.1초마다 실행
-  MsTimer2::start();// 타이머 인터럽트 start
+// B 채널이 LOW면 역방향, HIGH면 정방향
+void countPulse(int m)
+{
+  pulseCount[m] += (digitalRead(encoderPinB[m]) == LOW) ? -1 : 1;
 }
- 
-void loop() {
-  if(Serial.available() > 0)
+void motor_1_pulse() { countPulse(0); }
+void motor_2_pulse() { countPulse(1); }
+
+// 타이머 인터럽트: 측정 주기 동안의 펄스 수를 저장하고 카운터를 초기화
+void sampleRPM()
+{
+  for (int m = 0; m < MOTOR_COUNT; m++)
   {
-    String inputStr = Serial.readStringUntil('\n');
-    Split(inputStr,',');
+    measuredPulses[m] = pulseCount[m];
+    pulseCount[m] = 0;
   }
-  float control_1 = targetRPM[0];
-  float control_2 = targetRPM[1];
-  doMotor_2(MOT_DIR_PIN_2, MOT_PWM_PIN_2,(control_2>=0)?HIGH:LOW, min(abs(control_2), 255));
-  doMotor_1(MOT_DIR_PIN_1, MOT_PWM_PIN_1,(control_1>=0)?HIGH:LOW, min(abs(control_1), 255));
+  rpmUpdated = true;
+}
 
+// command의 부호로 방향, 크기(최대 255)로 PWM을 정한다.
+void driveMotor(int m, float command)
+{
+  bool dir = command >= 0;
+  int vel = min(abs(command), 255);
+  digitalWrite(motorDirPin[m], dir);
+  analogWrite(motorPWMPin[m], dir ? (255 - vel) : vel);
 }
- 
-// Increment the number of pulses by 1
-void motor_1_pulse() {
-   
-  // Read the value for the encoder for the right wheel
-  int val = digitalRead(ENC_IN_1_B);
- 
-  if(val == LOW) {
-    Direction_motor_1 = false; // Reverse
+
+// data를 separator로 나눠 앞의 최대 max_count개를 out에 저장하고, 남은 문자열을 반환
+String splitFloats(const String &data, char separator, float *out, int max_count)
+{
+  int start = 0;
+  for (int count = 0; count < max_count; count++)
+  {
+    int index = data.indexOf(separator, start);
+    if (index == -1)
+    {
+      out[count] = data.substring(start).toFloat();
+      return "";
+    }
+    out[count] = data.substring(start, index).toFloat();
+    start = index + 1;
   }
-  else {
-    Direction_motor_1 = true; // Forward
-  }
-   
-  if (Direction_motor_1) {
-    motor_1_pulse_count++;
-  }
-  else {
-    motor_1_pulse_count--;
-  }
+  return data.substring(start);
 }
-void motor_2_pulse() {
-   
-  // Read the value for the encoder for the right wheel
-  int val = digitalRead(ENC_IN_2_B);
- 
-  if(val == LOW) {
-    Direction_motor_2 = false; // Reverse
+
+void printRPM(const long pulses[MOTOR_COUNT])
+{
+  float rpm[MOTOR_COUNT];
+  for (int m = 0; m < MOTOR_COUNT; m++)
+  {
+    rpm[m] = pulses[m] * (60000.0 / RPM_INTERVAL_MS) / ENC_COUNT_REV;
   }
-  else {
-    Direction_motor_2 = true; // Forward
-  }
-   
-  if (Direction_motor_2) {
-    motor_2_pulse_count++;
-  }
-  else {
-    motor_2_pulse_count--;
-  }
-}
-void doMotor_1(int motor_dir_pin, int motor_rpm_pin ,bool dir, int vel){
-  digitalWrite(motor_dir_pin, dir);
-  analogWrite(motor_rpm_pin, dir?(255 - vel):vel);
-}
-void doMotor_2(int motor_dir_pin, int motor_rpm_pin ,bool dir, int vel){
-  digitalWrite(motor_dir_pin, dir);
-  analogWrite(motor_rpm_pin, dir?(255 - vel):vel);
-}
-void getRPM(){
-  rpm_motor_1 = (float)(motor_1_pulse_count * 60 / ENC_COUNT_REV);
-  rpm_motor_2 = (float)(motor_2_pulse_count * 60 / ENC_COUNT_REV);
-  ang_velocity_1 = rpm_motor_1 * rpm_to_radians;   
-  ang_velocity_1_deg = ang_velocity_1 * rad_to_deg;
-  ang_velocity_2 = rpm_motor_2 * rpm_to_radians;   
-  ang_velocity_2_deg = ang_velocity_2 * rad_to_deg;
-    
+  float ang_velocity_1 = rpm[0] * rpm_to_radians;
+  float ang_velocity_1_deg = ang_velocity_1 * rad_to_deg;
+
   Serial.print(" Motor 1 Pulses: ");
-  Serial.println(motor_1_pulse_count);
+  Serial.println(pulses[0]);
   Serial.print(" Motor 2 Pulses: ");
-  Serial.println(motor_2_pulse_count);
+  Serial.println(pulses[1]);
   Serial.print(" Motor 1 Speed: ");
-  Serial.print(rpm_motor_1);
+  Serial.print(rpm[0]);
   Serial.print(" Motor 2 Speed: ");
-  Serial.print(rpm_motor_2);
+  Serial.print(rpm[1]);
   Serial.println(" RPM");
   Serial.print(" Angular Velocity: ");
-  Serial.print(rpm_motor_1);
+  Serial.print(ang_velocity_1);
   Serial.print(" rad per second");
   Serial.print("\t");
   Serial.print(ang_velocity_1_deg);
   Serial.println(" deg per second");
   Serial.println();
-
-  motor_1_pulse_count = 0;
-  motor_2_pulse_count = 0;
 }
-void Split(String sData, char cSeparator){	
-	int nCount = 0;
-	int nGetIndex = 0 ;
- 
-	//임시저장
-	String sTemp = "";
- 
-	//원본 복사
-	String sCopy = sData;
-  int i = 0;
-  int j = 0;
-	while(true)
-	{
-		//구분자 찾기
-		nGetIndex = sCopy.indexOf(cSeparator);
- 
-		//리턴된 인덱스가 있나?
-		if((-1 != nGetIndex) || (j>1))
-		{
-			//있다.
-      j+=1;
-			//데이터 넣고
-			sTemp = sCopy.substring(0, nGetIndex);
-      targetRPM[i] = sTemp.toFloat();
-		
-			//뺀 데이터 만큼 잘라낸다.
-			sCopy = sCopy.substring(nGetIndex + 1);
-		}
-		else
-		{
-			//없으면 마무리 한다.
-      slaveData = sCopy;
-      Serial2.print(slaveData);
-			break;
-		}
- 
-		//다음 문자로~
-		++nCount;
-    ++i;
-	}
- 
+
+void setup() {
+  Serial.begin(115200);
+  Serial2.begin(115200);
+
+  for (int m = 0; m < MOTOR_COUNT; m++)
+  {
+    pinMode(encoderPinA[m], INPUT_PULLUP);
+    pinMode(encoderPinB[m], INPUT);
+    pinMode(motorDirPin[m], OUTPUT);
+    pinMode(motorPWMPin[m], OUTPUT);
+  }
+
+  // Every time the pin goes high, this is a pulse
+  attachInterrupt(digitalPinToInterrupt(encoderPinA[0]), motor_1_pulse, RISING);
+  attachInterrupt(digitalPinToInterrupt(encoderPinA[1]), motor_2_pulse, RISING);
+
+  MsTimer2::set(RPM_INTERVAL_MS, sampleRPM);
+  MsTimer2::start();
+}
+
+void loop() {
+  if (Serial.available() > 0)
+  {
+    String slaveData = splitFloats(Serial.readStringUntil('\n'), ',', targetRPM, MOTOR_COUNT);
+    if (slaveData.length() > 0)
+    {
+      Serial2.println(slaveData);
+    }
+  }
+
+  if (rpmUpdated)
+  {
+    long pulses[MOTOR_COUNT];
+    noInterrupts();
+    for (int m = 0; m < MOTOR_COUNT; m++)
+    {
+      pulses[m] = measuredPulses[m];
+    }
+    rpmUpdated = false;
+    interrupts();
+    printRPM(pulses);
+  }
+
+  for (int m = 0; m < MOTOR_COUNT; m++)
+  {
+    driveMotor(m, targetRPM[m]);
+  }
 }

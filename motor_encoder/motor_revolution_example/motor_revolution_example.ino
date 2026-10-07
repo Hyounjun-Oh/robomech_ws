@@ -13,30 +13,23 @@ void doMotor(bool dir, int vel){
   analogWrite(motorPWMPin, (dir)?(255 - vel):vel); // dir이 high이면 255-vel, low이면 vel
 }
 
+// 0 -> 255 로 가속했다가 다시 0 으로 감속
+void accelerateThenDecelerate(bool dir){
+  for(int i = 0; i < 255; i++){
+    doMotor(dir, i);
+    delay(10);
+  }
+  for(int i = 255; i >= 0; i--){
+    doMotor(dir, i);
+    delay(10);
+  }
+}
+
 void setup() {
   pinMode(motorDirPin, OUTPUT); // pinMode 설정은 digital만 필요하고 PWM을 사용할 analog는 필요 없음.
 }
 
 void loop() {
-  // 시계방향으로 가속하다가 최고속도에서 다시 감속
-  for(int i = 0; i < 255; i++){
-    doMotor(HIGH, i); // (255-vel) 254 253 252 251 250 ... 1
-    delay(10);
-  }
-  for(int i = 255; i >= 0; i--){
-    doMotor(HIGH, i);  // (225-vel) 0 1 2 3 4 5 6 ... 254
-    delay(10);
-  }
-
-  // 반시계방향으로 가속하다가 최고속도에서 다시 감속
-  for(int i = 0; i < 255; i++){
-    doMotor(LOW, i); // 1 2 3 4 5 6 ... 254
-    delay(10);
-  }
-  for(int i = 255; i >= 0; i--){
-    doMotor(LOW, i); // 255 254 253 252 251 ... 1
-    delay(10);
-  }
+  accelerateThenDecelerate(HIGH); // 시계방향
+  accelerateThenDecelerate(LOW);  // 반시계방향
 }
-
-
