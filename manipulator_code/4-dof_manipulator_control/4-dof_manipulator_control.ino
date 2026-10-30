@@ -31,48 +31,51 @@
   #define DEVICE_NAME "3" //Dynamixel on Serial3(USART3)  <-OpenCM 485EXP
 #elif defined(__OPENCR__)
   #define DEVICE_NAME ""
-#endif   
+#endif
 #define BAUDRATE  57600
-#define JOINT_1    1 //DXL_ID
-#define JOINT_2    2
-#define JOINT_3    3
-#define JOINT_4    4
+#define JOINT_COUNT 4
+
+const uint8_t JOINT_IDS[JOINT_COUNT] = {1, 2, 3, 4}; //DXL_ID
+
+// 사다리꼴 속도 프로파일 설정
+const int32_t DRIVE_MODE_TIME_BASED = 4; //DriveMode Profile Configuration 정의
+const int32_t PROFILE_ACCELERATION = 4989;
+const int32_t PROFILE_VELOCITY = 3506;
+const unsigned long MOVE_WAIT_MS = 5000;
+
+const int32_t home_position[JOINT_COUNT] = {2048, 2400, 1300, 2500};
+const int32_t desired_position[JOINT_COUNT] = {3000, 2300, 1500, 2300};
+const int32_t desired_position_2[JOINT_COUNT] = {3000, 2048, 2048, 1024};
 
 DynamixelWorkbench dxl_wb;
 
-int joint[3]; //조인트 값 담을 배열 선언.
-int32_t get_position[3];
-int32_t get_desired_position[3];
-int home_position[4] = {2048,2400,1300,2500};
-// int home_position[4] = {2048,2048,2048,2048};
-int desired_position[4] = {3000,2300,1500,2300};
-int desired_position_2[4] = {3000,2048,2048,1024};
+int32_t joint[JOINT_COUNT]; //파이썬으로부터 받은 조인트 값
+int32_t get_position[JOINT_COUNT];
+int32_t get_desired_position[JOINT_COUNT];
 
-void setup() 
+void printResult(bool ok, const char *log, const char *fail_msg, const char *success_msg)
+{
+  if (ok)
+  {
+    Serial.println(success_msg);
+  }
+  else
+  {
+    Serial.println(log);
+    Serial.println(fail_msg);
+  }
+}
+
+void setup()
 {
   Serial.begin(57600); //다이나믹셀 제어용 UART
-  Serial2.begin(57600);
-  
-  //Serial.begin(9600); //Joint값 받는 UART
+  Serial2.begin(57600); //Joint값 받는 UART
 
-  // while(!Serial); // Wait for Opening Serial Monitor
-
-  const char *log;
-  bool result = false;
-  bool joint_1_check = false; //조인트 상태 체크
-  bool joint_2_check = false;
-  bool joint_3_check = false;
-  bool joint_4_check = false;
-
-  uint8_t joint_1 = JOINT_1;
-  uint8_t joint_2 = JOINT_2;
-  uint8_t joint_3 = JOINT_3;
-  uint8_t joint_4 = JOINT_4;
+  const char *log = NULL;
   uint16_t model_number = 0;
 
   // 모터 상태 초기화.
-
-  result = dxl_wb.init(DEVICE_NAME, BAUDRATE, &log);
+  bool result = dxl_wb.init(DEVICE_NAME, BAUDRATE, &log);
   if (result == false)
   {
     Serial.println(log);
@@ -81,215 +84,135 @@ void setup()
   else
   {
     Serial.print("Succeeded to init : ");
-    Serial.println(BAUDRATE);  
+    Serial.println(BAUDRATE);
   }
 
-  joint_1_check = dxl_wb.ping(joint_1, &model_number, &log);
-  joint_2_check = dxl_wb.ping(joint_2, &model_number, &log);
-  joint_3_check = dxl_wb.ping(joint_3, &model_number, &log);
-  joint_4_check = dxl_wb.ping(joint_4, &model_number, &log);
-  if (joint_1_check == false || joint_2_check == false || joint_3_check == false || joint_4_check == false)
+  result = true;
+  for (int i = 0; i < JOINT_COUNT; i++)
+    result &= dxl_wb.ping(JOINT_IDS[i], &model_number, &log);
+  printResult(result, log, "Failed to ping", "Succeeded to ping");
+
+  result = true;
+  for (int i = 0; i < JOINT_COUNT; i++)
+    result &= dxl_wb.jointMode(JOINT_IDS[i], 0, 0, &log);
+  printResult(result, log, "Failed to change joint mode", "Succeed to change joint mode\nDynamixel is moving...");
+
+  for (int i = 0; i < JOINT_COUNT; i++)
   {
-    Serial.println(log);
-    Serial.println("Failed to ping");
+    dxl_wb.itemWrite(JOINT_IDS[i], "Drive_Mode", DRIVE_MODE_TIME_BASED);
+    dxl_wb.itemWrite(JOINT_IDS[i], "Profile_Acceleration", PROFILE_ACCELERATION);
+    dxl_wb.itemWrite(JOINT_IDS[i], "Profile_Velocity", PROFILE_VELOCITY);
   }
-  else
-  {
-    Serial.println("Succeeded to ping");
-  }
-
-  joint_1_check = dxl_wb.jointMode(joint_1, 0, 0, &log);
-  joint_2_check = dxl_wb.jointMode(joint_2, 0, 0, &log);
-  joint_3_check = dxl_wb.jointMode(joint_3, 0, 0, &log);
-  joint_4_check = dxl_wb.jointMode(joint_4, 0, 0, &log);
-  if (joint_1_check == false || joint_2_check == false || joint_3_check == false || joint_4_check == false)
-  {
-    Serial.println(log);
-    Serial.println("Failed to change joint mode");
-  }
-  else
-  {
-    Serial.println("Succeed to change joint mode");
-    Serial.println("Dynamixel is moving...");
-  }
-  dxl_wb.itemWrite(JOINT_1, "Drive_Mode", 4); //DriveMode Profile Configuration 정의 
-  dxl_wb.itemWrite(JOINT_1, "Profile_Acceleration", 4989);
-  dxl_wb.itemWrite(JOINT_1, "Profile_Velocity", 3506);
-
-  dxl_wb.itemWrite(JOINT_2, "Drive_Mode", 4); //DriveMode Profile Configuration 정의 
-  dxl_wb.itemWrite(JOINT_2, "Profile_Acceleration", 4989);
-  dxl_wb.itemWrite(JOINT_2, "Profile_Velocity", 3506); 
-
-  dxl_wb.itemWrite(JOINT_3, "Drive_Mode", 4); //DriveMode Profile Configuration 정의 
-  dxl_wb.itemWrite(JOINT_3, "Profile_Acceleration", 4989);
-  dxl_wb.itemWrite(JOINT_3, "Profile_Velocity", 3506); 
-
-  dxl_wb.itemWrite(JOINT_4, "Drive_Mode", 4); //DriveMode Profile Configuration 정의 
-  dxl_wb.itemWrite(JOINT_4, "Profile_Acceleration", 4989);
-  dxl_wb.itemWrite(JOINT_4, "Profile_Velocity", 3506); 
 }
 
-void loop() 
+void moveJoints(const char *mode_name, const int32_t positions[JOINT_COUNT])
 {
-  // if (Serial2.available())
-  // {
-  //   String inputStr = Serial2.readStringUntil('\n');
-  //   Split(inputStr,',');
-  //   if (joint[2] == 58){
-  //     digitalWrite(13, HIGH);
-  //   }else{
-  //     digitalWrite(13, LOW);
-  //   };
+  Serial.println("----------------------------------------");
+  Serial.print("Mode : ");
+  Serial.println(mode_name);
+  for (int i = 0; i < JOINT_COUNT; i++)
+    dxl_wb.goalPosition(JOINT_IDS[i], positions[i]);
+  delay(MOVE_WAIT_MS);
+  Serial.println("complete");
+}
 
-  char input_data;
-  while(Serial.available())
+void loop()
+{
+  // 수신 버퍼의 마지막 문자를 명령으로 사용한다.
+  char input_data = 0;
+  while (Serial.available())
   {
     input_data = Serial.read();
   }
 
-  // Serial.println("----------------------------------------"); 
-  // Serial.println("Mode : From Python");    
-  // dxl_wb.goalPosition(JOINT_1, joint[0]);
-  // dxl_wb.goalPosition(JOINT_2, joint[1]);
-  // dxl_wb.goalPosition(JOINT_3, joint[2]);
-  // dxl_wb.goalPosition(JOINT_4, joint[3]);
-  // int delay_joint = maximum_calculation();
-  // delay_motor(delay_joint);
-  // Serial.println("complete");
-  if(input_data == '3')
+  switch (input_data)
   {
-    Serial.println("----------------------------------------"); 
-    Serial.println("Mode : 1");    
-    dxl_wb.goalPosition(JOINT_1, desired_position_2[0]);
-    dxl_wb.goalPosition(JOINT_2, desired_position_2[1]);
-    dxl_wb.goalPosition(JOINT_3, desired_position_2[2]);
-    dxl_wb.goalPosition(JOINT_4, desired_position_2[3]);
-    //int delay_joint = maximum_calculation();
-    //delay_motor(delay_joint);
-    delay(5000);
-    Serial.println("complete");
+    case '1': moveJoints("Home Position", home_position); break;
+    case '2': moveJoints("2", desired_position); break;
+    case '3': moveJoints("3", desired_position_2); break;
   }
-  if(input_data == '2')
-  {
-    Serial.println("----------------------------------------"); 
-    Serial.println("Mode : 1");    
-    dxl_wb.goalPosition(JOINT_1, desired_position[0]);
-    dxl_wb.goalPosition(JOINT_2, desired_position[1]);
-    dxl_wb.goalPosition(JOINT_3, desired_position[2]);
-    dxl_wb.goalPosition(JOINT_4, desired_position[3]);
-    //int delay_joint = maximum_calculation();
-    //delay_motor(delay_joint);
-    delay(5000);
-    Serial.println("complete");
-  }
-  if(input_data == '1')
-  {
-    Serial.println("----------------------------------------"); 
-    Serial.println("Mode : Home Position");     
-    
-    dxl_wb.goalPosition(JOINT_2, home_position[1]);
-    dxl_wb.goalPosition(JOINT_1, home_position[0]);
-    dxl_wb.goalPosition(JOINT_3, home_position[2]);
-    dxl_wb.goalPosition(JOINT_4, home_position[3]);
-    //int delay_joint = maximum_calculation();
-    //delay_motor(delay_joint);
-    delay(5000);
-    Serial.println("complete");
-  }
-  //}
+
+  // 파이썬(serial2arduino.py)으로부터 조인트 값 받아 이동하기:
+  // if (Serial2.available())
+  // {
+  //   splitInts(Serial2.readStringUntil('\n'), ',', joint, JOINT_COUNT);
+  //   for (int i = 0; i < JOINT_COUNT; i++)
+  //     dxl_wb.goalPosition(JOINT_IDS[i], joint[i]);
+  //   waitForJoint(farthestJoint());
+  // }
 }
 
-void delay_motor(int joint_ID){
-  while ((abs(get_desired_position[joint_ID-1] - get_position[joint_ID-1])) > 1){
-    dxl_wb.itemRead(joint_ID, "Goal_Position", &get_desired_position[joint_ID-1]);
-    dxl_wb.itemRead(joint_ID, "Present_Position", &get_position[joint_ID-1]);
-    delay(1);
-  };
-};
-
-int maximum_calculation(){
-  dxl_wb.itemRead(JOINT_1, "Goal_Position", &get_desired_position[0]);
-  dxl_wb.itemRead(JOINT_1, "Present_Position", &get_position[0]);
-  dxl_wb.itemRead(JOINT_2, "Goal_Position", &get_desired_position[1]);
-  dxl_wb.itemRead(JOINT_2, "Present_Position", &get_position[1]);
-  dxl_wb.itemRead(JOINT_3, "Goal_Position", &get_desired_position[2]);
-  dxl_wb.itemRead(JOINT_3, "Present_Position", &get_position[2]);
-  dxl_wb.itemRead(JOINT_4, "Goal_Position", &get_desired_position[3]);
-  dxl_wb.itemRead(JOINT_4, "Present_Position", &get_position[3]);
-  Serial.print("desired position : [");
-  Serial.print(get_desired_position[0]);
-  Serial.print(", ");
-  Serial.print(get_desired_position[1]);
-  Serial.print(", ");
-  Serial.print(get_desired_position[2]);
-  Serial.print(", ");
-  Serial.print(get_desired_position[3]);
-  Serial.println("]");
-
-  Serial.print("present position : [");
-  Serial.print(get_position[0]);
-  Serial.print(", ");
-  Serial.print(get_position[1]);
-  Serial.print(", ");
-  Serial.print(get_position[2]);
-  Serial.print(", ");
-  Serial.print(get_position[3]);
-  Serial.println("]");
-  int arr[4] = {abs(get_desired_position[0]-get_position[0]),abs(get_desired_position[1]-get_position[1]),abs(get_desired_position[2]-get_position[2]),abs(get_desired_position[3]-get_position[3])};
-  int max = 0;
-  int index = 0;
-  for(int i = 0;i<4;i++)
+void readPositions()
+{
+  for (int i = 0; i < JOINT_COUNT; i++)
   {
-    if(arr[i] > max ){
-      max = arr[i];
-      index = i+1;
-    };
+    dxl_wb.itemRead(JOINT_IDS[i], "Goal_Position", &get_desired_position[i]);
+    dxl_wb.itemRead(JOINT_IDS[i], "Present_Position", &get_position[i]);
+  }
+}
 
-  };
-  if (index == 0){index = 1;};
-  Serial.println(max);
+void printPositions(const char *label, const int32_t positions[JOINT_COUNT])
+{
+  Serial.print(label);
+  Serial.print(" : [");
+  for (int i = 0; i < JOINT_COUNT; i++)
+  {
+    if (i > 0) Serial.print(", ");
+    Serial.print(positions[i]);
+  }
+  Serial.println("]");
+}
+
+// 목표 위치에 도달할 때까지 대기 (joint_index: 0 ~ JOINT_COUNT-1)
+void waitForJoint(int joint_index)
+{
+  uint8_t id = JOINT_IDS[joint_index];
+  while (abs(get_desired_position[joint_index] - get_position[joint_index]) > 1)
+  {
+    dxl_wb.itemRead(id, "Goal_Position", &get_desired_position[joint_index]);
+    dxl_wb.itemRead(id, "Present_Position", &get_position[joint_index]);
+    delay(1);
+  }
+}
+
+// 목표 위치까지 남은 거리가 가장 큰 조인트의 인덱스를 반환
+int farthestJoint()
+{
+  readPositions();
+  printPositions("desired position", get_desired_position);
+  printPositions("present position", get_position);
+
+  int32_t max_error = 0;
+  int index = 0;
+  for (int i = 0; i < JOINT_COUNT; i++)
+  {
+    int32_t error = abs(get_desired_position[i] - get_position[i]);
+    if (error > max_error)
+    {
+      max_error = error;
+      index = i;
+    }
+  }
+  Serial.println(max_error);
   Serial.println(index);
   return index;
-};
+}
 
-void Split(String sData, char cSeparator)
-{	
-	int nCount = 0;
-	int nGetIndex = 0 ;
- 
-	//임시저장
-	String sTemp = "";
- 
-	//원본 복사
-	String sCopy = sData;
-  int i = 0;
-	while(true)
-	{
-		//구분자 찾기
-		nGetIndex = sCopy.indexOf(cSeparator);
- 
-		//리턴된 인덱스가 있나?
-		if(-1 != nGetIndex)
-		{
-			//있다.
- 
-			//데이터 넣고
-			sTemp = sCopy.substring(0, nGetIndex);
-      joint[i] = sTemp.toInt();
-		
-			//뺀 데이터 만큼 잘라낸다.
-			sCopy = sCopy.substring(nGetIndex + 1);
-		}
-		else
-		{
-			//없으면 마무리 한다.
-      joint[i] = sCopy.toInt();
-			break;
-		}
- 
-		//다음 문자로~
-		++nCount;
-    ++i;
-	}
- 
+// data를 separator로 나눠 최대 max_count개의 정수를 out에 저장하고, 저장한 개수를 반환
+int splitInts(const String &data, char separator, int32_t *out, int max_count)
+{
+  int count = 0;
+  int start = 0;
+  while (count < max_count)
+  {
+    int index = data.indexOf(separator, start);
+    if (index == -1)
+    {
+      out[count++] = data.substring(start).toInt();
+      break;
+    }
+    out[count++] = data.substring(start, index).toInt();
+    start = index + 1;
+  }
+  return count;
 }

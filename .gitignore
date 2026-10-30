@@ -1,0 +1,11 @@
+# Python
+__pycache__/
+*.py[cod]
+
+# Model weights / inference output
+*.pt
+inference/output/
+
+# IDE
+.theia/
+.vscode/

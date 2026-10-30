@@ -53,6 +53,25 @@ MAX_ROT = 4.0
 LIN_VEL_STEP_SIZE = 0.3
 ANG_VEL_STEP_SIZE = 0.3
 
+# 속도 벡터 인덱스: [Vx, Vy, Rz]
+VX, VY, RZ = range(3)
+STEP_SIZES = (LIN_VEL_STEP_SIZE, LIN_VEL_STEP_SIZE, ANG_VEL_STEP_SIZE)
+# NOTE: 기존 동작 유지를 위해 Rz도 MAX_LIN으로 제한한다 (MAX_ROT는 사용되지 않음).
+LIMITS = (MAX_LIN, MAX_LIN, MAX_LIN)
+
+# 키 -> (축, 증감 방향)
+KEY_BINDINGS = {
+    'w': (VX, +1),
+    'x': (VX, -1),
+    'a': (VY, +1),
+    'd': (VY, -1),
+    'q': (RZ, +1),
+    'e': (RZ, -1),
+}
+STOP_KEYS = (' ', 's')
+CTRL_C = '\x03'
+HELP_INTERVAL = 20  # 이 횟수만큼 속도를 바꾸면 도움말을 다시 출력
+
 msg = """
 혼자서도 잘해요
 [Mecanum wheel Mobile Manipulator]
@@ -69,59 +88,43 @@ s   : 강제 정지
 CTRL-C : 컨트롤러 종료
 """
 
-r = """
-Communications Failed
-"""
-
 
 def get_key(settings):
     if os.name == 'nt':
         return msvcrt.getch().decode('utf-8')
     tty.setraw(sys.stdin.fileno())
     rlist, _, _ = select.select([sys.stdin], [], [], 0.1)
-    if rlist:
-        key = sys.stdin.read(1)
-    else:
-        key = ''
+    key = sys.stdin.read(1) if rlist else ''
 
     termios.tcsetattr(sys.stdin, termios.TCSADRAIN, settings)
     return key
 
 
-def print_vels(target_linear_X_velocity, target_linear_Y_velocity, target_angular_velocity):
-    print('currently:\tlinear X velocity {0} \tlinear Y velocity {1}\t angular velocity {2} '.format(
-        target_linear_X_velocity,target_linear_Y_velocity,
-        target_angular_velocity))
+def print_vels(target):
+    print('currently:\tlinear X velocity {0} \tlinear Y velocity {1}\t angular velocity {2} '.format(*target))
 
 
 def make_simple_profile(output, input, slop):
     if input > output:
-        output = min(input, output + slop)
-    elif input < output:
-        output = max(input, output - slop)
-    else:
-        output = input
-
-    return output
+        return min(input, output + slop)
+    if input < output:
+        return max(input, output - slop)
+    return input
 
 
-def constrain(input_vel, low_bound, high_bound):
-    if input_vel < low_bound:
-        input_vel = low_bound
-    elif input_vel > high_bound:
-        input_vel = high_bound
-    else:
-        input_vel = input_vel
-
-    return input_vel
+def constrain(value, low_bound, high_bound):
+    return max(low_bound, min(value, high_bound))
 
 
-def check_linear_limit_velocity(velocity):
-    return constrain(velocity, -MAX_LIN, MAX_LIN)
-
-
-def check_angular_limit_velocity(velocity):
-    return constrain(velocity, -MAX_LIN, MAX_LIN)
+def make_twist(vx=0.0, vy=0.0, rz=0.0):
+    twist = Twist()
+    twist.linear.x = vx
+    twist.linear.y = vy
+    twist.linear.z = 0.0
+    twist.angular.x = 0.0
+    twist.angular.y = 0.0
+    twist.angular.z = rz
+    return twist
 
 
 def main():
@@ -136,104 +139,41 @@ def main():
     pub = node.create_publisher(Twist, 'cmd_vel', qos)
 
     status = 0
-    target_linear_X_velocity = 0.0
-    target_linear_Y_velocity = 0.0    
-    target_angular_velocity = 0.0
-    control_linear_X_velocity = 0.0
-    control_linear_Y_velocity = 0.0
-    control_angular_velocity = 0.0
+    target = [0.0, 0.0, 0.0]
+    control = [0.0, 0.0, 0.0]
 
     try:
         print(msg)
-        while(1):
+        while True:
             key = get_key(settings)
-            if key == 'w':
-                target_linear_X_velocity =\
-                    check_linear_limit_velocity(target_linear_X_velocity + LIN_VEL_STEP_SIZE)
-                status = status + 1
-                print_vels(target_linear_X_velocity, target_linear_Y_velocity, target_angular_velocity)
-            elif key == 'x':
-                target_linear_X_velocity =\
-                    check_linear_limit_velocity(target_linear_X_velocity - LIN_VEL_STEP_SIZE)
-                status = status + 1
-                print_vels(target_linear_X_velocity, target_linear_Y_velocity, target_angular_velocity)
-            elif key == 'a':
-                target_linear_Y_velocity =\
-                    check_linear_limit_velocity(target_linear_Y_velocity + LIN_VEL_STEP_SIZE)
-                status = status + 1
-                print_vels(target_linear_X_velocity, target_linear_Y_velocity, target_angular_velocity)
-            elif key == 'd':
-                target_linear_Y_velocity =\
-                    check_linear_limit_velocity(target_linear_Y_velocity - LIN_VEL_STEP_SIZE)
-                status = status + 1
-                print_vels(target_linear_X_velocity, target_linear_Y_velocity, target_angular_velocity)                              
-            elif key == 'q':
-                target_angular_velocity =\
-                    check_angular_limit_velocity(target_angular_velocity + ANG_VEL_STEP_SIZE)
-                status = status + 1
-                print_vels(target_linear_X_velocity, target_linear_Y_velocity, target_angular_velocity)
-            elif key == 'e':
-                target_angular_velocity =\
-                    check_angular_limit_velocity(target_angular_velocity - ANG_VEL_STEP_SIZE)
-                status = status + 1
-                print_vels(target_linear_X_velocity, target_linear_Y_velocity, target_angular_velocity)
-            elif key == ' ' or key == 's':
-                target_linear_X_velocity = 0.0
-                target_linear_Y_velocity = 0.0    
-                target_angular_velocity = 0.0
-                control_linear_X_velocity = 0.0
-                control_linear_Y_velocity = 0.0
-                control_angular_velocity = 0.0
-                print_vels(target_linear_X_velocity, target_linear_Y_velocity, target_angular_velocity)
-            else:
-                if (key == '\x03'):
-                    break
+            if key in KEY_BINDINGS:
+                axis, sign = KEY_BINDINGS[key]
+                target[axis] = constrain(
+                    target[axis] + sign * STEP_SIZES[axis], -LIMITS[axis], LIMITS[axis])
+                status += 1
+                print_vels(target)
+            elif key in STOP_KEYS:
+                target = [0.0, 0.0, 0.0]
+                control = [0.0, 0.0, 0.0]
+                print_vels(target)
+            elif key == CTRL_C:
+                break
 
-            if status == 20:
+            if status == HELP_INTERVAL:
                 print(msg)
                 status = 0
 
-            twist = Twist()
-
-            control_linear_X_velocity = make_simple_profile(
-                control_linear_X_velocity,
-                target_linear_X_velocity,
-                (LIN_VEL_STEP_SIZE / 2.0))
-
-            control_linear_Y_velocity = make_simple_profile(
-                control_linear_Y_velocity,
-                target_linear_Y_velocity,
-                (LIN_VEL_STEP_SIZE / 2.0))
-
-            twist.linear.x = control_linear_X_velocity
-            twist.linear.y = control_linear_Y_velocity
-            twist.linear.z = 0.0
-
-            control_angular_velocity = make_simple_profile(
-                control_angular_velocity,
-                target_angular_velocity,
-                (ANG_VEL_STEP_SIZE / 2.0))
-
-            twist.angular.x = 0.0
-            twist.angular.y = 0.0
-            twist.angular.z = control_angular_velocity
-
-            pub.publish(twist)
+            control = [
+                make_simple_profile(c, t, step / 2.0)
+                for c, t, step in zip(control, target, STEP_SIZES)
+            ]
+            pub.publish(make_twist(*control))
 
     except Exception as e:
         print(e)
 
     finally:
-        twist = Twist()
-        twist.linear.x = 0.0
-        twist.linear.y = 0.0
-        twist.linear.z = 0.0
-
-        twist.angular.x = 0.0
-        twist.angular.y = 0.0
-        twist.angular.z = 0.0
-
-        pub.publish(twist)
+        pub.publish(make_twist())
 
         if os.name != 'nt':
             termios.tcsetattr(sys.stdin, termios.TCSADRAIN, settings)

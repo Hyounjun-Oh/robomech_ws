@@ -1,62 +1,38 @@
-int joint[3];
+// serial2arduino.py 수신 테스트: 3번째 조인트 값이 58이면 LED를 켠다.
+const int LED_PIN = 13;
+const int JOINT_COUNT = 4;
+
+int32_t joint[JOINT_COUNT];
+
+// data를 separator로 나눠 최대 max_count개의 정수를 out에 저장하고, 저장한 개수를 반환
+int splitInts(const String &data, char separator, int32_t *out, int max_count)
+{
+  int count = 0;
+  int start = 0;
+  while (count < max_count)
+  {
+    int index = data.indexOf(separator, start);
+    if (index == -1)
+    {
+      out[count++] = data.substring(start).toInt();
+      break;
+    }
+    out[count++] = data.substring(start, index).toInt();
+    start = index + 1;
+  }
+  return count;
+}
 
 void setup() {
   Serial.begin(57600);
-  pinMode(13, OUTPUT);
-  digitalWrite(13,LOW);
+  pinMode(LED_PIN, OUTPUT);
+  digitalWrite(LED_PIN, LOW);
 }
 
 void loop() {
-  if(Serial.available())
+  if (Serial.available())
   {
-    String inputStr = Serial.readStringUntil('\n');
-    Split(inputStr,',');
-    if (joint[2] == 58){
-      digitalWrite(13, HIGH);
-    }else{
-      digitalWrite(13, LOW);
-    };
+    splitInts(Serial.readStringUntil('\n'), ',', joint, JOINT_COUNT);
+    digitalWrite(LED_PIN, joint[2] == 58 ? HIGH : LOW);
   }
-}
-
-void Split(String sData, char cSeparator)
-{	
-	int nCount = 0;
-	int nGetIndex = 0 ;
- 
-	//임시저장
-	String sTemp = "";
- 
-	//원본 복사
-	String sCopy = sData;
-  int i = 0;
-	while(true)
-	{
-		//구분자 찾기
-		nGetIndex = sCopy.indexOf(cSeparator);
- 
-		//리턴된 인덱스가 있나?
-		if(-1 != nGetIndex)
-		{
-			//있다.
- 
-			//데이터 넣고
-			sTemp = sCopy.substring(0, nGetIndex);
-      joint[i] = sTemp.toInt();
-		
-			//뺀 데이터 만큼 잘라낸다.
-			sCopy = sCopy.substring(nGetIndex + 1);
-		}
-		else
-		{
-			//없으면 마무리 한다.
-      joint[i] = sCopy.toInt();
-			break;
-		}
- 
-		//다음 문자로~
-		++nCount;
-    ++i;
-	}
- 
 }
